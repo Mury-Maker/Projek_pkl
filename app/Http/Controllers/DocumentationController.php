@@ -14,10 +14,7 @@ use Illuminate\Http\RedirectResponse;
 
 class DocumentationController extends Controller
 {
-    /**
-     * Menangani permintaan ke halaman utama (/).
-     * Mencari halaman default dan mengalihkan pengguna ke sana.
-     */
+
     public function index(): View|RedirectResponse
     {
         $defaultCategory = 'epesantren';
