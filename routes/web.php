@@ -6,12 +6,15 @@ use App\Http\Controllers\CKEditorController;
 use App\Http\Controllers\NavmenuController;
 use App\Models\NavMenu;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Auth; // Tambahkan ini untuk Auth::check()
 
 // Mengatur rute root '/'
 Route::get('/', function () {
     if (Auth::check()) {
+        // Jika sudah login, arahkan ke halaman dokumentasi default
         return redirect()->route('docs', ['category' => 'epesantren']);
     }
+    // Jika belum login, arahkan ke halaman login
     return redirect()->route('login');
 })->name('home');
 
@@ -22,17 +25,21 @@ Route::post('/login', [LoginController::class, 'login'])->middleware('guest');
 // Rute Logout - hanya bisa diakses oleh pengguna yang sudah login
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->middleware('auth');
 
-// Rute Dokumentasi - bisa diakses oleh siapa saja (sesuai kebutuhan Anda)
-Route::get('/docs/{category}/{page?}', [DocumentationController::class, 'show'])->name('docs');
+// Grup rute yang memerlukan autentikasi untuk mengakses dokumentasi dan fungsionalitas terkait
+Route::middleware('auth')->group(function () {
+    // Rute Dokumentasi - sekarang hanya bisa diakses setelah login
+    Route::get('/docs', [DocumentationController::class, 'index'])->name('docs.index'); // Tambahkan rute index jika belum ada
+    Route::get('/docs/{category}/{page?}', [DocumentationController::class, 'show'])->name('docs');
+
+    // Rute API dan fungsionalitas terkait dokumentasi yang memerlukan autentikasi
+    Route::get('/api/search', [DocumentationController::class, 'search'])->name('api.search');
+    Route::post('/upload', [CKEditorController::class, 'upload'])->name('ckeditor.upload');
+    Route::post('/docs/save/{menu_id}', [DocumentationController::class, 'saveContent'])->name('docs.save');
+    Route::delete('/docs/delete/{menu_id}', [DocumentationController::class, 'deleteContent'])->name('docs.delete');
+});
 
 
-// --- SISA RUTE ANDA (TETAP SAMA) ---
-Route::get('/api/search', [DocumentationController::class, 'search'])->name('api.search');
-Route::post('/upload', [CKEditorController::class, 'upload'])->name('ckeditor.upload');
-Route::post('/docs/save/{menu_id}', [DocumentationController::class, 'saveContent'])->name('docs.save');
-Route::delete('/docs/delete/{menu_id}', [DocumentationController::class, 'deleteContent'])->name('docs.delete');
-
-
+// Rute API untuk Navigasi - sudah dalam grup middleware 'auth', jadi tidak perlu diubah
 Route::middleware('auth')->prefix('api')->group(function () {
     Route::prefix('navigasi')->group(function () {
         Route::get('/all/{category}', [NavmenuController::class, 'getAllMenusForSidebar'])->name('api.navigasi.all');

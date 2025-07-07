@@ -1,5 +1,4 @@
 <?php
-// File: app/Http/Controllers/DocumentationController.php
 
 namespace App\Http\Controllers;
 
@@ -11,28 +10,40 @@ use Illuminate\Support\Facades\File;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth; // Pastikan ini ada
+// use Illuminate\Support\Facades\Log; // Anda bisa un-comment ini untuk logging jika perlu debugging lanjutan
 
 class DocumentationController extends Controller
 {
-
+    /**
+     * Menampilkan halaman indeks dokumentasi default.
+     */
     public function index(): View|RedirectResponse
     {
+        // Pastikan user terautentikasi untuk mengakses dokumentasi.
+        // Jika tidak, arahkan ke halaman login.
+        if (!Auth::check()) {
+            return redirect()->route('login');
+        }
+
         $defaultCategory = 'epesantren';
 
+        // Ambil menu pertama dari kategori default
         $firstMenu = NavMenu::where('category', $defaultCategory)
             ->where('menu_child', 0)
             ->orderBy('menu_order', 'asc')
             ->first();
 
+        // Jika belum ada menu, tampilkan pesan selamat datang
         if (!$firstMenu) {
             return view('docs.welcome', [
                 'title' => 'Selamat Datang di Dokumentasi',
                 'message' => 'Belum ada konten dokumentasi yang dibuat. Silakan login sebagai admin untuk memulai.'
             ]);
         }
-        
-        $pageSlug = Str::slug($firstMenu->menu_nama);
 
+        // Arahkan ke halaman dokumentasi pertama dari kategori default
+        $pageSlug = Str::slug($firstMenu->menu_nama);
         return redirect()->route('docs', [
             'category' => $defaultCategory,
             'page' => $pageSlug
@@ -40,10 +51,17 @@ class DocumentationController extends Controller
     }
 
     /**
-     * Menampilkan halaman dokumentasi yang spesifik.
+     * Menampilkan halaman dokumentasi yang spesifik berdasarkan kategori dan halaman.
      */
     public function show($category, $page = null): View|RedirectResponse
     {
+        // Pastikan user terautentikasi untuk melihat dokumentasi.
+        // Jika tidak, arahkan ke halaman login.
+        if (!Auth::check()) {
+            return redirect()->route('login');
+        }
+
+        // Jika halaman tidak spesifik, arahkan ke halaman pertama dalam kategori
         if (is_null($page)) {
             $firstMenu = NavMenu::where('category', $category)
                 ->where('menu_child', 0)
@@ -55,7 +73,6 @@ class DocumentationController extends Controller
             }
 
             $pageSlug = Str::slug($firstMenu->menu_nama);
-            
             return redirect()->route('docs', ['category' => $category, 'page' => $pageSlug]);
         }
 
@@ -80,34 +97,37 @@ class DocumentationController extends Controller
         $viewPath = "docs.pages.{$category}.{$page}";
         $filePath = resource_path("views/".str_replace('.', '/', $viewPath).".blade.php");
 
+        // Jika file Blade belum ada, buat dengan konten kondisional
         if (!File::exists($filePath)) {
             File::ensureDirectoryExists(resource_path("views/docs/pages/{$category}"));
             File::put(
                 $filePath,
                 <<<BLADE
-@guest
+{{-- Selalu tampilkan konten dokumentasi --}}
 <div class="ck-content">
     {!! \$contentDocs->docsContent->content ?? "Konten Belum Tersedia" !!}
 </div>
-@endguest
 
+{{-- Tampilkan editor hanya jika user terautentikasi DAN memiliki role 'admin' --}}
 @auth
-<div class="menuid">
-    </div>
-    <div class="main-container">
-        <div class="editor-container" id="editor-container">
-            <form action="{{ route('docs.save', ['menu_id' => \$menu_id]) }}" method="POST">
-                @csrf
-                <textarea name="content" id="editor" class="ckeditor">
-                    {{ \$contentDocs->docsContent->content ?? "Konten Belum Tersedia" }}
-                </textarea>
-                <div class="buttons">
-                    <button type="submit" class="btn btn-simpan">Update</button>
-                    <a href="{{ route('docs', ['category' => \$currentCategory, 'page' => \$currentPage]) }}" class="btn btn-batal">Batal</a>
+    @if(Auth::user()->role === 'admin')
+        <div class="menuid">
+        </div>
+        <div class="main-container">
+            <div class="editor-container" id="editor-container">
+                <form action="{{ route('docs.save', ['menu_id' => \$menu_id]) }}" method="POST">
+                    @csrf
+                    <textarea name="content" id="editor" class="ckeditor">
+                        {{ \$contentDocs->docsContent->content ?? "Konten Belum Tersedia" }}
+                    </textarea>
+                    <div class="buttons">
+                        <button type="submit" class="btn btn-simpan">Update</button>
+                        <a href="{{ route('docs', ['category' => \$currentCategory, 'page' => \$currentPage]) }}" class="btn btn-batal">Batal</a>
+                    </div>
                 </form>
             </div>
         </div>
-    </div>
+    @endif
 @endauth
 BLADE
             );
@@ -126,8 +146,18 @@ BLADE
         ]);
     }
 
+    /**
+     * Menyimpan atau memperbarui konten dokumentasi.
+     */
     public function saveContent(Request $request, $menu_id)
     {
+        // Pemeriksaan role: Hanya user yang terautentikasi dengan role 'admin' yang bisa menyimpan konten.
+        // Jika tidak, hentikan eksekusi dengan error 403 (Forbidden).
+        if (!Auth::check() || (Auth::user()->role ?? '') !== 'admin') {
+            // Log::warning('Unauthorized attempt to save content by user: ' . (Auth::check() ? Auth::user()->email : 'Guest') . ' with role: ' . (Auth::user()->role ?? 'NULL'));
+            abort(403, 'Anda tidak memiliki izin untuk melakukan tindakan ini.');
+        }
+
         $validator = Validator::make($request->all(), [
             'content' => 'required|string',
         ]);
@@ -144,8 +174,18 @@ BLADE
         return redirect()->back()->with('success', 'Konten berhasil disimpan.');
     }
 
+    /**
+     * Menghapus konten dokumentasi.
+     */
     public function deleteContent($menu_id)
     {
+        // Pemeriksaan role: Hanya user yang terautentikasi dengan role 'admin' yang bisa menghapus konten.
+        // Jika tidak, hentikan eksekusi dengan error 403 (Forbidden).
+        if (!Auth::check() || (Auth::user()->role ?? '') !== 'admin') {
+            // Log::warning('Unauthorized attempt to delete content by user: ' . (Auth::check() ? Auth::user()->email : 'Guest') . ' with role: ' . (Auth::user()->role ?? 'NULL'));
+            abort(403, 'Anda tidak memiliki izin untuk melakukan tindakan ini.');
+        }
+
         $doc = DocsContent::where('menu_id', $menu_id)->first();
 
         if ($doc) {
@@ -156,16 +196,18 @@ BLADE
         return redirect()->back()->with('error', 'Konten tidak ditemukan.');
     }
 
+    /**
+     * Mencari konten dokumentasi.
+     */
     public function search(Request $request)
     {
+        // Untuk fungsionalitas search, Anda bisa memutuskan apakah harus diakses oleh semua user
+        // (termasuk user biasa) atau hanya admin. Berdasarkan pertanyaan sebelumnya,
+        // diasumsikan search juga hanya bisa diakses setelah login.
+        // Middleware 'auth' pada route sudah menangani ini.
+        
         $query = $request->input('query');
-        // Hapus $category = $request->input('category', 'epesantren'); di sini
-        // Kita akan mencari di SEMUA kategori jika ingin menampilkan Dashboard - Epesantren dan Dashboard - Admin Sekolah
-        // Jika Anda ingin pencarian tetap terfilter berdasarkan kategori yang sedang aktif di UI,
-        // maka variabel $category ini bisa tetap dipertahankan dan ditambahkan ke query.
-        // Untuk tujuan menampilkan semua kategori, kita akan mengabaikan $category untuk sementara
-        // atau mengganti variabel $category di request menjadi 'all'.
-
+        
         if (!$query) {
             return response()->json(['results' => []]);
         }
@@ -173,33 +215,33 @@ BLADE
         $results = [];
         $searchTerm = '%' . strtolower($query) . '%';
         
-        // Cari di semua menu, tanpa filter kategori awal
+        // Cari di semua menu
         $menuMatches = NavMenu::whereRaw('LOWER(TRIM(menu_nama)) LIKE ?', [$searchTerm])
             ->get();
 
         foreach ($menuMatches as $menu) {
-            $results[$menu->menu_id . '-' . $menu->category] = [ // Kunci unik menggunakan ID dan Kategori
+            $results[$menu->menu_id . '-' . $menu->category] = [
                 'id' => $menu->menu_id,
                 'name' => $menu->menu_nama,
-                'category_name' => Str::headline($menu->category), // Tambah nama kategori yang diformat
+                'category_name' => Str::headline($menu->category),
                 'url' => route('docs', ['category' => $menu->category, 'page' => Str::slug($menu->menu_nama)]),
                 'context' => 'Judul Menu',
             ];
         }
 
-        // Cari di konten docs, dan pastikan kita ambil kategori dari menu terkait
-        $contentMatches = DocsContent::with('menu') // Load relasi menu
+        // Cari di konten docs
+        $contentMatches = DocsContent::with('menu')
             ->where('content', 'LIKE', "%{$query}%")
             ->get();
 
         foreach ($contentMatches as $content) {
-            if ($content->menu) { // Pastikan ada menu terkait
+            if ($content->menu) {
                 $key = $content->menu->menu_id . '-' . $content->menu->category;
-                if (!isset($results[$key])) { // Hanya tambahkan jika belum ada dari hasil menuMatches
+                if (!isset($results[$key])) {
                     $results[$key] = [
                         'id' => $content->menu->menu_id,
                         'name' => $content->menu->menu_nama,
-                        'category_name' => Str::headline($content->menu->category), // Tambah nama kategori
+                        'category_name' => Str::headline($content->menu->category),
                         'url' => route('docs', ['category' => $content->menu->category, 'page' => Str::slug($content->menu->menu_nama)]),
                         'context' => Str::limit(strip_tags($content->content), 100),
                     ];
