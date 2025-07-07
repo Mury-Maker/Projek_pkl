@@ -7,8 +7,22 @@ use App\Http\Controllers\NavmenuController;
 use App\Models\NavMenu;
 use Illuminate\Support\Str;
 
-Route::get('/', [DocumentationController::class, 'index'])->name('home');
+// Mengatur rute root '/'
+Route::get('/', function () {
+    if (Auth::check()) {
+        return redirect()->route('docs', ['category' => 'epesantren']);
+    }
+    return redirect()->route('login');
+})->name('home');
 
+// Rute Login - hanya bisa diakses oleh tamu (belum login)
+Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login')->middleware('guest');
+Route::post('/login', [LoginController::class, 'login'])->middleware('guest');
+
+// Rute Logout - hanya bisa diakses oleh pengguna yang sudah login
+Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->middleware('auth');
+
+// Rute Dokumentasi - bisa diakses oleh siapa saja (sesuai kebutuhan Anda)
 Route::get('/docs/{category}/{page?}', [DocumentationController::class, 'show'])->name('docs');
 
 
@@ -17,9 +31,7 @@ Route::get('/api/search', [DocumentationController::class, 'search'])->name('api
 Route::post('/upload', [CKEditorController::class, 'upload'])->name('ckeditor.upload');
 Route::post('/docs/save/{menu_id}', [DocumentationController::class, 'saveContent'])->name('docs.save');
 Route::delete('/docs/delete/{menu_id}', [DocumentationController::class, 'deleteContent'])->name('docs.delete');
-Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login')->middleware('guest');
-Route::post('/login', [LoginController::class, 'login'])->middleware('guest');
-Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->middleware('auth');
+
 
 Route::middleware('auth')->prefix('api')->group(function () {
     Route::prefix('navigasi')->group(function () {

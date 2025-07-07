@@ -14,10 +14,7 @@ use Illuminate\Http\RedirectResponse;
 
 class DocumentationController extends Controller
 {
-    /**
-     * Menangani permintaan ke halaman utama (/).
-     * Mencari halaman default dan mengalihkan pengguna ke sana.
-     */
+
     public function index(): View|RedirectResponse
     {
         $defaultCategory = 'epesantren';
@@ -105,13 +102,8 @@ class DocumentationController extends Controller
                     {{ \$contentDocs->docsContent->content ?? "Konten Belum Tersedia" }}
                 </textarea>
                 <div class="buttons">
-                    <button type="submit" class="btn btn-simpan">Simpan</button>
+                    <button type="submit" class="btn btn-simpan">Update</button>
                     <a href="{{ route('docs', ['category' => \$currentCategory, 'page' => \$currentPage]) }}" class="btn btn-batal">Batal</a>
-                </form>
-                <form action="{{ route('docs.delete', ['menu_id' => \$menu_id]) }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus konten ini?')">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="btn btn-hapus">Hapus</button>
                 </form>
             </div>
         </div>
