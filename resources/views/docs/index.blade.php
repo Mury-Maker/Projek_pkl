@@ -24,10 +24,81 @@
         .notification-message.show { opacity: 1; transform: translateY(0); }
         .notification-message.success { background-color: #d1fae5; color: #065f46; border: 1px solid #34d399; }
         .notification-message.error { background-color: #fee2e2; color: #991b1b; border: 1px solid #ef4444; }
+        
+        /* Modal asli untuk Add/Edit Menu */
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 4000; visibility: hidden; opacity: 0; transition: visibility 0s, opacity 0.3s; }
         .modal.show { visibility: visible; opacity: 1; }
         .modal-content { background-color: white; padding: 2rem; border-radius: 0.5rem; box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1); width: 90%; max-width: 600px; transform: translateY(-50px); transition: transform 0.3s ease-out; }
         .modal.show .modal-content { transform: translateY(0); }
+        
+        /* CSS untuk Search Overlay/Modal BARU */
+        #search-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7); /* Overlay gelap */
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Mulai dari atas */
+            padding-top: 5rem; /* Jarak dari atas */
+            z-index: 5000; /* Pastikan di atas semua */
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        #search-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+        #search-modal-content {
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 650px; /* Lebar maksimum seperti gambar */
+            transform: translateY(-20px);
+            transition: transform 0.3s ease-out;
+        }
+        #search-overlay.open #search-modal-content {
+            transform: translateY(0);
+        }
+        #search-input-container {
+            border-bottom: 1px solid #e2e8f0; /* border-b-gray-200 */
+        }
+        #search-results-list {
+            max-height: 400px; /* Tinggi maksimum untuk daftar hasil */
+            overflow-y: auto;
+            padding: 1rem 0;
+        }
+        #search-results-list a {
+            display: block;
+            padding: 0.75rem 1.5rem;
+            color: #4a5568; /* text-gray-700 */
+        }
+        #search-results-list a:hover {
+            background-color: #edf2f7; /* bg-gray-100 */
+        }
+        .search-result-category {
+            font-size: 0.875rem; /* text-sm */
+            font-weight: 600; /* font-semibold */
+            color: #2d3748; /* text-gray-800 */
+            padding: 0.5rem 1.5rem;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .search-result-item .search-title {
+            font-weight: 500; /* font-medium */
+            color: #2c5282; /* text-blue-800 */
+        }
+        .search-result-item .search-context {
+            font-size: 0.875rem; /* text-sm */
+            color: #718096; /* text-gray-600 */
+            margin-top: 0.25rem;
+        }
+
         .buttons{ min-width: 100%; margin: 10px; display: flex; padding: 10px; gap: 12px; flex-wrap: wrap; justify-content: center; }
         .btn{ padding: 12px; border-radius: 8px; }
         .btn-simpan{ background-color: #45a65a; color: white; }
@@ -49,6 +120,43 @@
         .menu-arrow-icon i.open {
             transform: rotate(-90deg); /* Dari kiri ke bawah */
         }
+
+        /* Menambahkan CSS untuk memastikan tinggi item menu yang seragam */
+        .sidebar-menu-item-wrapper {
+            /* Pastikan elemen ini memiliki tinggi yang konsisten */
+            min-height: 40px; /* Contoh tinggi minimum yang sama untuk semua item */
+            display: flex; /* Gunakan flexbox untuk alignment yang lebih baik */
+            align-items: center; /* Pusatkan secara vertikal */
+        }
+        .header-content-wrapper {
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+
+        .header-spacer-left,
+        .header-spacer-right {
+            flex-grow: 1; /* Coba kembali ke flex-grow: 1, karena kita akan memberi flex-grow ke bagian search */
+            display: flex;
+            align-items: center;
+            min-width: 0; 
+        }
+
+        .header-spacer-left {
+            justify-content: flex-start;
+        }
+        .header-spacer-right {
+            justify-content: flex-end;
+        }
+
+        /* Tambahkan kelas baru untuk kontainer tombol search */
+        .search-button-wrapper {
+            flex-grow: 1; /* **PERUBAHAN PENTING: Beri flex-grow: 1 pada wrapper search** */
+            display: flex; /* Jadikan flex container untuk memusatkan tombol di dalamnya */
+            justify-content: center; /* Pusatkan tombol search di dalam wrappernya */
+            align-items: center;
+            min-width: 0; /* Pastikan bisa menyusut jika perlu */
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -56,15 +164,30 @@
         {{-- Header --}}
         <header class="bg-white shadow-sm w-full border-b border-gray-200 z-20">
             <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex h-16 items-center justify-between">
-                    <div class="flex items-center space-x-8">
+                <div class="flex h-16 items-center header-content-wrapper">
+
+                    {{-- Bagian Kiri Header (Logo + Kategori) --}}
+                    <div class="header-spacer-left space-x-8">
                         <a href="{{ route('home') }}" class="text-2xl font-bold text-blue-600">ProjekPKL</a>
                         <div class="hidden md:flex items-center space-x-2 rounded-lg bg-gray-100 p-1">
                             <a href="{{ route('docs', ['category' => 'epesantren']) }}" class="px-3 py-1 text-sm font-medium rounded-md transition-colors {{ $currentCategory == 'epesantren' ? 'bg-white text-gray-800 shadow' : 'text-gray-600 hover:bg-gray-200' }}">Epesantren</a>
                             <a href="{{ route('docs', ['category' => 'adminsekolah']) }}" class="px-3 py-1 text-sm font-medium rounded-md transition-colors {{ $currentCategory == 'adminsekolah' ? 'bg-white text-gray-800 shadow' : 'text-gray-600 hover:bg-gray-200' }}">Admin Sekolah</a>
                         </div>
                     </div>
-                    <div class="flex items-center">
+
+                    {{-- Bagian Tengah Header (untuk Search Button) --}}
+                    <div class="search-button-wrapper"> {{-- **PERUBAHAN: Menggunakan wrapper baru** --}}
+                        <button id="open-search-modal-btn-header" class="flex items-center justify-between w-full px-4 py-2 text-sm text-gray-500 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"> {{-- **PERUBAHAN: Hapus max-w-4xl, hanya w-full** --}}
+                            <span class="flex items-center space-x-2">
+                                <i class="fa fa-search text-gray-400"></i>
+                                <span>Cari menu & konten...</span>
+                            </span>
+                            <span class="text-xs text-gray-400">⌘K</span>
+                        </button>
+                    </div>
+
+                    {{-- Bagian Kanan Header (Login/Logout) --}}
+                    <div class="header-spacer-right space-x-4">
                         @guest
                             <a href="{{ route('login') }}" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">Log In</a>
                         @else
@@ -74,7 +197,6 @@
                 </div>
             </div>
         </header>
-
         <div class="flex flex-1 overflow-hidden">
             {{-- Sidebar --}}
             <aside class="w-72 flex-shrink-0 overflow-y-auto bg-stone border-r border-gray-200 p-6">
@@ -86,22 +208,7 @@
                     </button>
                 </div>
                 @endauth
-                <form id="search-form" class="relative mb-4">
-                    <input type="text" id="menu-search-input" placeholder="Cari menu & konten..." class="w-full pl-4 pr-10 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <button type="submit" class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-blue-600">
-                        <i class="fa fa-search"></i>
-                    </button>
-                </form>
-                <div id="search-results-modal" class="modal">
-                    <div class="modal-content">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-xl font-bold text-gray-800" id="search-modal-title">Hasil Pencarian</h3>
-                            <button id="close-search-modal-btn" class="text-gray-500 hover:text-gray-800">&times;</button>
-                        </div>
-                        <div id="search-results-body" class="max-h-[60vh] overflow-y-auto">
-                        </div>
-                    </div>
-                </div>
+                
                 <div id="notification-container"></div>
                 <nav id="sidebar-navigation">
                     @include('docs._menu_item', [
@@ -129,7 +236,28 @@
         </div>
     </div>
 
-    {{-- Modal for Add/Edit Menu --}}
+    {{-- MODAL GLOBAL UNTUK PENCARIAN (BARU) --}}
+    <div id="search-overlay" class="search-modal">
+        <div id="search-modal-content">
+            <div id="search-input-container" class="flex items-center px-4 py-3">
+                <i class="fa fa-search text-gray-400 mr-3"></i>
+                <input type="text" id="search-overlay-input" placeholder="Cari dokumentasi..." class="flex-grow bg-transparent border-none focus:outline-none text-lg text-gray-800">
+                <button id="clear-search-input-btn" class="text-gray-400 hover:text-gray-600 focus:outline-none hidden">
+                    <i class="fa fa-times-circle"></i>
+                </button>
+                <button id="close-search-overlay-btn" class="text-gray-500 hover:text-gray-700 ml-3 focus:outline-none p-1 rounded">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            <div id="search-results-list" class="empty-state">
+                <p class="text-center text-gray-500 p-8">Mulai ketik untuk mencari...</p>
+                {{-- Hasil pencarian akan diisi di sini oleh JavaScript --}}
+            </div>
+        </div>
+    </div>
+    {{-- AKHIR MODAL GLOBAL UNTUK PENCARIAN --}}
+
+    {{-- Modal for Add/Edit Menu (EXISTING) --}}
     @auth
     <div id="menu-modal" class="modal">
         <div class="modal-content">
@@ -152,7 +280,7 @@
                         <option value="0">Tidak Ada (Menu Utama)</option>
                         {{-- Opsi parent akan diisi oleh JavaScript saat modal dibuka --}}
                         {{-- @foreach ($allParentMenus as $parent) <-- This PHP block is replaced by JS dynamic loading for this specific select --}}
-                        {{--     <option value="{{ $parent->menu_id }}">{{ $parent->menu_nama }}</option> --}}
+                        {{--       <option value="{{ $parent->menu_id }}">{{ $parent->menu_nama }}</option> --}}
                         {{-- @endforeach --}}
                     </select>
                 </div>
@@ -227,59 +355,134 @@
         };
 
         // =================================
-        // LOGIKA PENCARIAN
+        // LOGIKA PENCARIAN (BARU)
         // =================================
-        const searchForm = document.getElementById('search-form');
-        const searchInput = document.getElementById('menu-search-input');
-        const searchModal = document.getElementById('search-results-modal');
-        const searchResultsBody = document.getElementById('search-results-body');
-        const closeSearchModalBtn = document.getElementById('close-search-modal-btn');
-        const searchModalTitle = document.getElementById('search-modal-title');
+        const openSearchModalBtnHeader = document.getElementById('open-search-modal-btn-header');
+        const searchOverlay = document.getElementById('search-overlay');
+        const searchOverlayInput = document.getElementById('search-overlay-input');
+        const searchResultsList = document.getElementById('search-results-list');
+        const clearSearchInputBtn = document.getElementById('clear-search-input-btn');
+        const closeSearchOverlayBtn = document.getElementById('close-search-overlay-btn');
 
-        if (searchForm) {
-            searchForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const query = searchInput.value.trim();
-                if (query.length < 2) {
-                    showNotification('Masukkan minimal 2 karakter untuk mencari.', 'error');
-                    return;
-                }
-                searchModal.classList.add('show');
-                searchModalTitle.textContent = `Mencari untuk: "${query}"`;
-                searchResultsBody.innerHTML = '<p class="text-gray-500">Memuat hasil...</p>';
-                try {
-                    const data = await fetchAPI(`/api/search?query=${query}&category=${currentCategory}`);
-                    searchResultsBody.innerHTML = '';
-                    if (data.results && data.results.length > 0) {
-                        const resultList = document.createElement('ul');
-                        resultList.className = 'space-y-3';
-                        data.results.forEach(result => {
-                            const li = document.createElement('li');
-                            li.innerHTML = `
-                                <a href="${result.url}" class="block p-3 rounded-lg hover:bg-gray-100 transition-colors">
-                                    <div class="font-semibold text-blue-600">${result.name}</div>
-                                    <p class="text-sm text-gray-600 mt-1">${result.context}</p>
-                                </a>
-                            `;
-                            resultList.appendChild(li);
-                        });
-                        searchResultsBody.appendChild(resultList);
-                    } else {
-                        searchResultsBody.innerHTML = '<p class="text-gray-500">Tidak ada hasil yang ditemukan.</p>';
-                    }
-                } catch (error) {
-                    searchResultsBody.innerHTML = '<p class="text-red-500">Terjadi kesalahan saat mencari.</p>';
+        // Fungsi untuk membuka modal pencarian
+        const openSearchModal = () => {
+            searchOverlay.classList.add('open');
+            searchOverlayInput.focus(); // Fokus ke input saat dibuka
+            searchResultsList.innerHTML = '<p class="text-center text-gray-500 p-8">Mulai ketik untuk mencari...</p>'; // Reset tampilan
+            clearSearchInputBtn.classList.add('hidden'); // Sembunyikan tombol clear
+        };
+
+        // Fungsi untuk menutup modal pencarian
+        const closeSearchModalSearchOverlay = () => { // Mengubah nama fungsi agar tidak bentrok
+            searchOverlay.classList.remove('open');
+            searchOverlayInput.value = ''; // Kosongkan input
+        };
+
+        // Event listener untuk tombol pencarian di header
+        if (openSearchModalBtnHeader) {
+            openSearchModalBtnHeader.addEventListener('click', openSearchModal);
+        }
+
+        // Event listener untuk menutup modal saat klik di luar area modal atau tombol close
+        if (searchOverlay) {
+            searchOverlay.addEventListener('click', (e) => {
+                if (e.target === searchOverlay || e.target.closest('#close-search-overlay-btn')) {
+                    closeSearchModalSearchOverlay(); // Menggunakan fungsi baru
                 }
             });
         }
+        if (closeSearchOverlayBtn) {
+            closeSearchOverlayBtn.addEventListener('click', closeSearchModalSearchOverlay); // Menggunakan fungsi baru
+        }
 
-        const closeSearchModal = () => searchModal.classList.remove('show');
-        if(closeSearchModalBtn) closeSearchModalBtn.addEventListener('click', closeSearchModal);
-        if(searchModal) searchModal.addEventListener('click', (e) => {
-            if (e.target === searchModal) {
-                closeSearchModal();
+        // Event listener untuk shortcut keyboard (CMD + K atau CTRL + K)
+        document.addEventListener('keydown', (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                e.preventDefault(); // Mencegah perilaku default browser
+                openSearchModal();
+            }
+            if (e.key === 'Escape' && searchOverlay.classList.contains('open')) {
+                closeSearchModalSearchOverlay(); // Menggunakan fungsi baru
             }
         });
+
+        // Event listener untuk tombol clear input search
+        if (clearSearchInputBtn) {
+            clearSearchInputBtn.addEventListener('click', () => {
+                searchOverlayInput.value = '';
+                searchResultsList.innerHTML = '<p class="text-center text-gray-500 p-8">Mulai ketik untuk mencari...</p>';
+                clearSearchInputBtn.classList.add('hidden');
+                searchOverlayInput.focus();
+            });
+        }
+
+        // Event listener untuk input pencarian (menjalankan pencarian)
+        let searchTimeout;
+        if (searchOverlayInput) {
+            searchOverlayInput.addEventListener('input', () => {
+                clearTimeout(searchTimeout);
+                const query = searchOverlayInput.value.trim();
+                
+                if (query.length > 0) {
+                    clearSearchInputBtn.classList.remove('hidden');
+                } else {
+                    clearSearchInputBtn.classList.add('hidden');
+                }
+
+                if (query.length < 2) {
+                    searchResultsList.innerHTML = '<p class="text-center text-gray-500 p-8">Masukkan minimal 2 karakter untuk mencari.</p>';
+                    return;
+                }
+
+                searchResultsList.innerHTML = '<p class="text-center text-gray-500 p-8">Mencari...</p>';
+
+                searchTimeout = setTimeout(async () => {
+                    try {
+                        const data = await fetchAPI(`/api/search?query=${query}&category=${currentCategory}`);
+                        searchResultsList.innerHTML = ''; // Kosongkan hasil sebelumnya
+                        
+                        if (data.results && data.results.length > 0) {
+                            // Kelompokkan hasil berdasarkan kategori jika ada
+                            const groupedResults = data.results.reduce((acc, result) => {
+                                const categoryName = result.context === 'Judul Menu' ? 'Menu Utama' : (result.context ? result.context.split(':')[0] : 'Konten'); // Bisa disesuaikan
+                                if (!acc[categoryName]) {
+                                    acc[categoryName] = [];
+                                }
+                                acc[categoryName].push(result);
+                                return acc;
+                            }, {});
+
+                            for (const category in groupedResults) {
+                                const categoryHeader = document.createElement('div');
+                                categoryHeader.className = 'search-result-category';
+                                categoryHeader.textContent = category;
+                                searchResultsList.appendChild(categoryHeader);
+
+                                groupedResults[category].forEach(result => {
+                                    const itemLink = document.createElement('a');
+                                    itemLink.href = result.url;
+                                    itemLink.className = 'search-result-item px-6 py-3 block hover:bg-gray-100 rounded-md';
+                                    itemLink.innerHTML = `
+                                        <div class="search-title">${result.name}</div>
+                                        ${result.context !== 'Judul Menu' ? `<p class="search-context">${result.context}</p>` : ''}
+                                    `;
+                                    // Tutup modal saat hasil diklik
+                                    itemLink.addEventListener('click', closeSearchModalSearchOverlay); // Menggunakan fungsi baru
+                                    searchResultsList.appendChild(itemLink);
+                                });
+                            }
+                        } else {
+                            searchResultsList.innerHTML = '<p class="text-center text-gray-500 p-8">Tidak ada hasil yang ditemukan.</p>';
+                        }
+
+                    } catch (error) {
+                        searchResultsList.innerHTML = '<p class="text-center text-red-500 p-8">Terjadi kesalahan saat mencari.</p>';
+                        console.error('Search API Error:', error);
+                    }
+                }, 300); // Debounce 300ms
+            });
+        }
+
 
         // =================================
         // LOGIKA DROPDOWN SIDEBAR (Event Delegation)
@@ -301,40 +504,51 @@
 
                 if (submenu) {
                     const isCurrentlyOpen = submenu.classList.contains('open');
+
+                    // Tutup semua submenu yang sedang terbuka di level yang sama
+                    const allOpenSubmenus = sidebar.querySelectorAll('.submenu-container.open');
+                    allOpenSubmenus.forEach(openSubmenu => {
+                        // Pastikan hanya menutup yang bukan parent dari submenu yang akan dibuka/ditutup
+                        // dan yang bukan submenu yang sedang diklik saat ini
+                        if (openSubmenu !== submenu && !submenu.contains(openSubmenu) && !openSubmenu.contains(submenu)) {
+                            openSubmenu.classList.remove('open');
+                            const relatedTrigger = sidebar.querySelector(`[data-toggle="${openSubmenu.id}"]`);
+                            if (relatedTrigger) {
+                                relatedTrigger.setAttribute('aria-expanded', 'false');
+                                relatedTrigger.querySelector('i')?.classList.remove('open');
+                            }
+                        }
+                    });
+
                     submenu.classList.toggle('open');
                     trigger.setAttribute('aria-expanded', isCurrentlyOpen ? 'false' : 'true');
                     if (icon) {
-                        icon.classList.toggle('open', !isCurrentlyOpen); // Toggle based on new state
+                        icon.classList.toggle('open', !isCurrentlyOpen);
                     }
-                } else if (icon) {
-                    icon.classList.toggle('open');
                 }
+                // Jika trigger bukan submenu (misalnya hanya ikon panah yang ada tanpa submenu terkait)
+                // maka tidak perlu melakukan apa-apa selain mencegah default.
             });
         }
 
         const initSidebarDropdown = () => {
-            // This function will now primarily handle opening the active menu's parents
-            // and ensure the correct arrow icon state on initial load or sidebar refresh.
-            const sidebarElement = document.getElementById('sidebar-navigation'); // Get it again in case it was replaced
+            const sidebarElement = document.getElementById('sidebar-navigation');
             if (!sidebarElement) return;
 
-            // Function to open parents of the active menu item
             const openActiveMenuParents = () => {
                 const activeItemContainer = sidebarElement.querySelector('.bg-blue-100')?.closest('.my-1');
                 if (activeItemContainer) {
                     let currentSubmenu = activeItemContainer.closest('.submenu-container');
                     while (currentSubmenu) {
                         currentSubmenu.classList.add('open');
-                        // Find the button that controls this specific submenu
                         const triggerButton = sidebarElement.querySelector(`[data-toggle="${currentSubmenu.id}"]`);
                         if (triggerButton) {
                             const icon = triggerButton.querySelector('i');
                             if (icon) {
-                                icon.classList.add('open'); // Ensure arrow rotates for active parents
+                                icon.classList.add('open');
                                 triggerButton.setAttribute('aria-expanded', 'true');
                             }
                         }
-                        // Move up to the next parent submenu container
                         currentSubmenu = currentSubmenu.parentElement.closest('.submenu-container');
                     }
                 }
@@ -396,7 +610,7 @@
             menuModal.classList.add('show');
         };
 
-        const closeMenuModal = () => menuModal.classList.remove('show');
+        const closeMenuModalAdmin = () => menuModal.classList.remove('show'); // Mengubah nama fungsi agar tidak bentrok
 
         // THIS IS THE CRUCIAL FUNCTION THAT RE-ATTACHES CRUD LISTENERS
         const refreshSidebar = async () => {
@@ -470,7 +684,7 @@
         // =================================
         // INISIALISASI SAAT HALAMAN DIMUAT
         // =================================
-        initSidebarDropdown(); // Initial setup for dropdowns (opening active parents)
+        initSidebarDropdown(); // Initial setup for dropdowns (open active parents)
 
         // Only attach form-related listeners if the menuForm exists (i.e., if user is authenticated)
         if (menuForm) {
@@ -478,7 +692,7 @@
                 console.log('Add Parent Menu button clicked.');
                 openMenuModal('create', null, 0);
             });
-            document.getElementById('cancel-menu-form-btn').addEventListener('click', closeMenuModal);
+            document.getElementById('cancel-menu-form-btn').addEventListener('click', closeMenuModalAdmin); // Menggunakan fungsi baru
 
             menuForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
@@ -497,30 +711,25 @@
                     }
                 });
 
-                // Add _method explicitly to the body if method is PUT (for Laravel to recognize it)
-                if (method === 'PUT') {
-                    dataToSend._method = 'PUT';
-                }
-
                 const url = menuId ? `/api/navigasi/${menuId}` : '/api/navigasi';
 
                 const options = {
-                    method: 'POST', // Always POST for Fetch API, use X-HTTP-Method-Override for PUT/DELETE
+                    method: 'POST', // Default POST, Laravel akan menangani _method untuk PUT/DELETE
                     body: JSON.stringify(dataToSend),
                 };
 
-                // Add X-HTTP-Method-Override if method is PUT
+                // Tambahkan X-HTTP-Method-Override jika method adalah PUT
                 if (method === 'PUT') {
                     options.headers = {
                         ...options.headers,
                         'X-HTTP-Method-Override': 'PUT'
                     };
                 }
-
+                
                 try {
                     const data = await fetchAPI(url, options);
                     showNotification(data.success, 'success');
-                    closeMenuModal();
+                    closeMenuModalAdmin(); // Tutup modal dengan fungsi baru
                     refreshSidebar(); // REFRESH SIDEBAR AFTER A SUCCESSFUL SAVE/UPDATE
                 } catch (error) {
                     console.error('Error saat menyimpan menu:', error);

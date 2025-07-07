@@ -1,5 +1,5 @@
 @guest
-<div class="contents">
+<div class="ck-content">
     {!! $contentDocs->docsContent->content ?? "Konten Belum Tersedia" !!}
 </div>
 @endguest
