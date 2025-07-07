@@ -7,7 +7,7 @@ use App\Http\Controllers\NavmenuController;
 use App\Models\NavMenu;
 use Illuminate\Support\Str;
 
-Route::get('/', [DocumentationController::class, 'index'])->name('home');
+Route::get('/', [LoginController::class, 'showloginform'])->name('home');
 
 Route::get('/docs/{category}/{page?}', [DocumentationController::class, 'show'])->name('docs');
 
