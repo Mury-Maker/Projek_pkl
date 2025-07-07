@@ -119,16 +119,15 @@ BLADE
         }
 
         return view('docs.index', [
-            'title'           => 'Dokumentasi ' . Str::headline($category),
-            'navigation'      => $navigation,
-            'currentCategory' => $category,
-            'currentPage'     => $page,
-            'selectedNavItem' => $selectedNavItem,
-            'menu_id'         => $menuId,
-            // Perbaikan ini sudah benar di sini
-            'allParentMenus'  => NavMenu::where('category', $category)->orderBy('menu_nama')->get(['menu_id', 'menu_nama']),
-            'viewPath'        => $viewPath,
-            'contentDocs'     => $menusWithDocs,
+            'title'             => 'Dokumentasi ' . Str::headline($category),
+            'navigation'        => $navigation,
+            'currentCategory'   => $category,
+            'currentPage'       => $page,
+            'selectedNavItem'   => $selectedNavItem,
+            'menu_id'           => $menuId,
+            'allParentMenus'    => NavMenu::where('category', $category)->orderBy('menu_nama')->get(['menu_id', 'menu_nama']),
+            'viewPath'          => $viewPath,
+            'contentDocs'       => $menusWithDocs,
         ]);
     }
 
@@ -165,44 +164,51 @@ BLADE
     public function search(Request $request)
     {
         $query = $request->input('query');
-        $category = $request->input('category', 'epesantren');
+        // Hapus $category = $request->input('category', 'epesantren'); di sini
+        // Kita akan mencari di SEMUA kategori jika ingin menampilkan Dashboard - Epesantren dan Dashboard - Admin Sekolah
+        // Jika Anda ingin pencarian tetap terfilter berdasarkan kategori yang sedang aktif di UI,
+        // maka variabel $category ini bisa tetap dipertahankan dan ditambahkan ke query.
+        // Untuk tujuan menampilkan semua kategori, kita akan mengabaikan $category untuk sementara
+        // atau mengganti variabel $category di request menjadi 'all'.
 
         if (!$query) {
             return response()->json(['results' => []]);
         }
 
         $results = [];
-
         $searchTerm = '%' . strtolower($query) . '%';
         
-        $menuMatches = NavMenu::where('category', $category)
-            ->whereRaw('LOWER(TRIM(menu_nama)) LIKE ?', [$searchTerm])
+        // Cari di semua menu, tanpa filter kategori awal
+        $menuMatches = NavMenu::whereRaw('LOWER(TRIM(menu_nama)) LIKE ?', [$searchTerm])
             ->get();
 
         foreach ($menuMatches as $menu) {
-            $results[$menu->menu_id] = [
+            $results[$menu->menu_id . '-' . $menu->category] = [ // Kunci unik menggunakan ID dan Kategori
                 'id' => $menu->menu_id,
                 'name' => $menu->menu_nama,
+                'category_name' => Str::headline($menu->category), // Tambah nama kategori yang diformat
                 'url' => route('docs', ['category' => $menu->category, 'page' => Str::slug($menu->menu_nama)]),
                 'context' => 'Judul Menu',
             ];
         }
 
-        $contentMatches = DocsContent::with('menu')
-            ->whereHas('menu', function ($q) use ($category) {
-                $q->where('category', $category);
-            })
+        // Cari di konten docs, dan pastikan kita ambil kategori dari menu terkait
+        $contentMatches = DocsContent::with('menu') // Load relasi menu
             ->where('content', 'LIKE', "%{$query}%")
             ->get();
 
         foreach ($contentMatches as $content) {
-            if ($content->menu && !isset($results[$content->menu->menu_id])) {
-                $results[$content->menu->menu_id] = [
-                    'id' => $content->menu->menu_id,
-                    'name' => $content->menu->menu_nama,
-                    'url' => route('docs', ['category' => $content->menu->category, 'page' => Str::slug($content->menu->menu_nama)]),
-                    'context' => Str::limit(strip_tags($content->content), 100),
-                ];
+            if ($content->menu) { // Pastikan ada menu terkait
+                $key = $content->menu->menu_id . '-' . $content->menu->category;
+                if (!isset($results[$key])) { // Hanya tambahkan jika belum ada dari hasil menuMatches
+                    $results[$key] = [
+                        'id' => $content->menu->menu_id,
+                        'name' => $content->menu->menu_nama,
+                        'category_name' => Str::headline($content->menu->category), // Tambah nama kategori
+                        'url' => route('docs', ['category' => $content->menu->category, 'page' => Str::slug($content->menu->menu_nama)]),
+                        'context' => Str::limit(strip_tags($content->content), 100),
+                    ];
+                }
             }
         }
 

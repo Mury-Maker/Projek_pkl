@@ -438,36 +438,40 @@
 
                 searchTimeout = setTimeout(async () => {
                     try {
-                        const data = await fetchAPI(`/api/search?query=${query}&category=${currentCategory}`);
+                        // URL API pencarian, sudah tidak perlu parameter category jika backend mencari di semua
+                        const data = await fetchAPI(`/api/search?query=${query}`); 
                         searchResultsList.innerHTML = ''; // Kosongkan hasil sebelumnya
                         
                         if (data.results && data.results.length > 0) {
-                            // Kelompokkan hasil berdasarkan kategori jika ada
-                            const groupedResults = data.results.reduce((acc, result) => {
-                                const categoryName = result.context === 'Judul Menu' ? 'Menu Utama' : (result.context ? result.context.split(':')[0] : 'Konten'); // Bisa disesuaikan
-                                if (!acc[categoryName]) {
-                                    acc[categoryName] = [];
+                            // Kelompokkan hasil berdasarkan nama menu untuk tampilan yang lebih rapi
+                            const groupedResultsByMenuName = data.results.reduce((acc, result) => {
+                                if (!acc[result.name]) { // Gunakan result.name sebagai kunci utama pengelompokan
+                                    acc[result.name] = [];
                                 }
-                                acc[categoryName].push(result);
+                                acc[result.name].push(result);
                                 return acc;
                             }, {});
 
-                            for (const category in groupedResults) {
-                                const categoryHeader = document.createElement('div');
-                                categoryHeader.className = 'search-result-category';
-                                categoryHeader.textContent = category;
-                                searchResultsList.appendChild(categoryHeader);
+                            // Iterasi dan tampilkan hasil yang sudah dikelompokkan
+                            for (const menuName in groupedResultsByMenuName) {
+                                // Buat header untuk setiap nama menu yang unik (misal: "Dashboard")
+                                const menuGroupHeader = document.createElement('div');
+                                menuGroupHeader.className = 'search-result-category'; // Re-use class for grouping
+                                menuGroupHeader.textContent = menuName; // Judul group adalah nama menunya
+                                searchResultsList.appendChild(menuGroupHeader);
 
-                                groupedResults[category].forEach(result => {
+                                // Tampilkan setiap item dalam grup ini
+                                groupedResultsByMenuName[menuName].forEach(result => {
                                     const itemLink = document.createElement('a');
                                     itemLink.href = result.url;
                                     itemLink.className = 'search-result-item px-6 py-3 block hover:bg-gray-100 rounded-md';
                                     itemLink.innerHTML = `
-                                        <div class="search-title">${result.name}</div>
-                                        ${result.context !== 'Judul Menu' ? `<p class="search-context">${result.context}</p>` : ''}
+                                        <div class="search-title">${result.name}</div> {{-- Hanya nama menu, karena kategori ada di bawahnya --}}
+                                        <p class="search-category-info">${result.category_name}</p> {{-- **PERUBAHAN PENTING: Tampilkan category_name di baris terpisah** --}}
+                                        ${result.context && result.context !== 'Judul Menu' ? `<p class="search-context">${result.context}</p>` : ''}
                                     `;
                                     // Tutup modal saat hasil diklik
-                                    itemLink.addEventListener('click', closeSearchModalSearchOverlay); // Menggunakan fungsi baru
+                                    itemLink.addEventListener('click', closeSearchModalSearchOverlay);
                                     searchResultsList.appendChild(itemLink);
                                 });
                             }
