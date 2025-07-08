@@ -271,6 +271,63 @@
         #delete-confirm-modal.show #delete-confirm-modal-content {
             transform: translateY(0);
         }
+
+        /* Dropdown untuk Kategori di Header */
+        .header-dropdown-menu {
+            display: none;
+            position: absolute;
+            background-color: white; /* Warna latar belakang putih */
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            top: 100%; /* Posisi di bawah tombol induk */
+            left: 0;
+            margin-top: 0.5rem;
+            border: 1px solid #4a5568; /* Garis luar gelap (warna gray-700 dari Tailwind) */
+        }
+
+        .header-dropdown-menu.open {
+            display: block;
+        }
+
+        .header-dropdown-menu a {
+            color: black;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            text-align: left;
+        }
+
+        .header-dropdown-menu a:hover {
+            background-color: #f1f1f1;
+        }
+
+        /* Kustomisasi untuk tombol dropdown Kategori */
+        #category-dropdown-btn {
+            background-color: #ffffff; /* bg-gray-200 */
+            color: #4a5568; /* text-gray-700 */
+            border: 1px solid #4a5568; /* Garis luar gelap */
+            padding: 10px 16px; /* Menyesuaikan padding agar lebih proporsional */
+            border-radius: 8px; /* Sudut membulat */
+            font-weight: 500; /* font-medium */
+            display: inline-flex; /* Agar ikon dan teks bisa diatur sejajar */
+            align-items: center; /* Pusatkan secara vertikal */
+            transition: all 0.2s ease-in-out; /* Transisi halus untuk hover */
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* Sedikit shadow */
+        }
+
+        #category-dropdown-btn:hover {
+            background-color: #cbd5e0; /* Sedikit lebih gelap saat hover */
+        }
+
+        #category-dropdown-btn .fa-chevron-down,
+        #category-dropdown-btn .fa-chevron-up {
+            margin-left: 8px; /* Jarak antara teks dan ikon */
+            font-size: 0.75rem; /* Ukuran ikon lebih kecil */
+            transition: transform 0.2s ease-in-out;
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -283,9 +340,16 @@
                     {{-- Bagian Kiri Header (Logo + Kategori) --}}
                     <div class="header-spacer-left space-x-8">
                         <a href="{{ route('home') }}" class="text-2xl font-bold text-blue-600">ProjekPKL</a>
-                        <div class="hidden md:flex items-center space-x-2 rounded-lg bg-gray-100 p-1">
-                            <a href="{{ route('docs', ['category' => 'epesantren']) }}" class="px-3 py-1 text-sm font-medium rounded-md transition-colors {{ $currentCategory == 'epesantren' ? 'bg-white text-gray-800 shadow' : 'text-gray-600 hover:bg-gray-200' }}">Epesantren</a>
-                            <a href="{{ route('docs', ['category' => 'adminsekolah']) }}" class="px-3 py-1 text-sm font-medium rounded-md transition-colors {{ $currentCategory == 'adminsekolah' ? 'bg-white text-gray-800 shadow' : 'text-gray-600 hover:bg-gray-200' }}">Admin Sekolah</a>
+                        
+                        {{-- Dropdown Kategori --}}
+                        <div class="relative hidden md:block">
+                            <button id="category-dropdown-btn" class="flex items-center px-4 py-2 text-base font-medium rounded-lg transition-colors focus:outline-none">
+                                <span id="category-button-text">Kategori</span> <i class="ml-2 fa fa-chevron-down text-xs"></i>
+                            </button>
+                            <div id="category-dropdown-menu" class="header-dropdown-menu">
+                                <a href="{{ route('docs', ['category' => 'epesantren']) }}" class="px-3 py-2 text-sm font-medium {{ $currentCategory == 'epesantren' ? 'bg-gray-100 text-gray-800' : 'text-gray-700 hover:bg-gray-50' }}" data-category-key="epesantren" data-category-name="Epesantren">Epesantren</a>
+                                <a href="{{ route('docs', ['category' => 'adminsekolah']) }}" class="px-3 py-2 text-sm font-medium {{ $currentCategory == 'adminsekolah' ? 'bg-gray-100 text-gray-800' : 'text-gray-700 hover:bg-gray-50' }}" data-category-key="adminsekolah" data-category-name="Admin Sekolah">Admin Sekolah</a>
+                            </div>
                         </div>
                     </div>
 
@@ -302,11 +366,18 @@
 
                     {{-- Bagian Kanan Header (Login/Logout) --}}
                     <div class="header-spacer-right space-x-4">
-                        @guest
-                            <a href="{{ route('login') }}" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">Log In</a>
+                        @auth
+                            {{-- Tampilkan role pengguna jika sudah login --}}
+                            <span class="text-sm font-medium text-gray-700">
+                                Role: <span class="font-semibold">{{ ucfirst(auth()->user()->role) }}</span>
+                            </span>
+                            <form method="POST" action="{{ route('logout') }}">
+                                @csrf
+                                <button type="submit" class="text-sm font-medium text-gray-600 hover:text-gray-900">Log Out</button>
+                            </form>
                         @else
-                            <form method="POST" action="{{ route('logout') }}">@csrf<button type="submit" class="text-sm font-medium text-gray-600 hover:text-gray-900">Log Out</button></form>
-                        @endguest
+                            <a href="{{ route('login') }}" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">Log In</a>
+                        @endauth
                     </div>
                 </div>
             </div>
@@ -721,6 +792,91 @@
         };
 
         initSidebarDropdown();
+
+        // =================================
+        // LOGIKA DROPDOWN KATEGORI HEADER
+        // =================================
+        const categoryDropdownBtn = document.getElementById('category-dropdown-btn');
+        const categoryDropdownText = document.getElementById('category-button-text'); // Dapatkan elemen span
+        const categoryDropdownMenu = document.getElementById('category-dropdown-menu');
+
+        // Dapatkan nama kategori saat ini dari Laravel ($currentCategory)
+        // Ini akan mengambil nilai dari PHP saat halaman dimuat
+        const currentCategoryFromBlade = "{{ $currentCategory ?? 'default' }}"; 
+
+        // Fungsi untuk memperbarui teks tombol dropdown
+        const updateCategoryButtonText = (categoryKey) => {
+            let categoryDisplayName = 'Kategori'; // Default jika tidak cocok
+            if (categoryKey === 'epesantren') {
+                categoryDisplayName = 'Epesantren';
+            } else if (categoryKey === 'adminsekolah') {
+                categoryDisplayName = 'Admin Sekolah';
+            }
+            // Tambahkan kondisi lain jika ada kategori baru di masa mendatang
+            // else if (categoryKey === 'nama_kategori_baru') {
+            //     categoryDisplayName = 'Nama Kategori Baru';
+            // }
+
+            if (categoryDropdownText) {
+                categoryDropdownText.textContent = categoryDisplayName;
+            }
+        };
+
+        // Panggil fungsi ini saat DOM dimuat untuk mengatur teks awal
+        // Ini adalah bagian penting yang memastikan teks tombol benar setelah reload halaman
+        updateCategoryButtonText(currentCategoryFromBlade);
+
+
+        if (categoryDropdownBtn && categoryDropdownMenu) {
+            categoryDropdownBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); // Mencegah event click menyebar ke document dan langsung menutup dropdown
+                categoryDropdownMenu.classList.toggle('open');
+                const chevronIcon = categoryDropdownBtn.querySelector('.fa-chevron-down, .fa-chevron-up');
+                if (categoryDropdownMenu.classList.contains('open')) {
+                    chevronIcon.classList.remove('fa-chevron-down');
+                    chevronIcon.classList.add('fa-chevron-up');
+                } else {
+                    chevronIcon.classList.remove('fa-chevron-up');
+                    chevronIcon.classList.add('fa-chevron-down');
+                }
+            });
+
+            // Close the dropdown if the user clicks outside of it
+            document.addEventListener('click', (event) => {
+                if (!categoryDropdownBtn.contains(event.target) && !categoryDropdownMenu.contains(event.target)) {
+                    categoryDropdownMenu.classList.remove('open');
+                    const chevronIcon = categoryDropdownBtn.querySelector('.fa-chevron-up');
+                    if (chevronIcon) { // Pastikan ikon ada sebelum mencoba menghapus kelas
+                        chevronIcon.classList.remove('fa-chevron-up');
+                        chevronIcon.classList.add('fa-chevron-down');
+                    }
+                }
+            });
+
+            // Menangani klik pada item dropdown
+            categoryDropdownMenu.querySelectorAll('a').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    // TIDAK perlu e.preventDefault() karena kita ingin link navigasi berjalan
+                    // Ambil category key dari atribut href
+                    const href = item.getAttribute('href'); // Gunakan 'item' bukan 'e.target' untuk memastikan ini adalah <a>
+                    const url = new URL(href);
+                    const newCategoryKey = url.searchParams.get('category'); // Dapatkan nilai 'category' dari URL
+
+                    if (newCategoryKey) {
+                        updateCategoryButtonText(newCategoryKey); // Update teks tombol berdasarkan key baru
+                    }
+
+                    // Tutup dropdown setelah item diklik
+                    categoryDropdownMenu.classList.remove('open');
+                    const chevronIcon = categoryDropdownBtn.querySelector('.fa-chevron-up');
+                    if (chevronIcon) {
+                        chevronIcon.classList.remove('fa-chevron-up');
+                        chevronIcon.classList.add('fa-chevron-down');
+                    }
+                    // Navigasi ke URL yang dipilih akan terjadi secara otomatis karena ini adalah tag <a>
+                });
+            });
+        }
 
         // =================================
         // NEW CENTRAL SUCCESS POPUP LOGIC

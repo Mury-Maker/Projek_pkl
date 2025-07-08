@@ -17,15 +17,15 @@ class UserSeeder extends Seeder
         User::create([
             'name' => 'Admin User',
             'email' => 'admin@example.com',
-            'password' => Hash::make('password'), // Ganti 'password' dengan password yang aman
+            'password' => Hash::make('123'), // Ganti 'password' dengan password yang aman
             'role' => 'admin',
         ]);
 
         User::create([
             'name' => 'Regular User',
             'email' => 'user@example.com',
-            'password' => Hash::make('password'), // Ganti 'password' dengan password yang aman
-            'role' => 'user',
+            'password' => Hash::make('123'), // Ganti 'password' dengan password yang aman
+            'role' => 'anggota',
         ]);
     }
 }
