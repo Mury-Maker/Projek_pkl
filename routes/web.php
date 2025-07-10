@@ -51,3 +51,6 @@ Route::middleware('auth')->prefix('api')->group(function () {
         Route::put('/{navMenu}/content', [NavmenuController::class, 'updateMenuContent'])->name('api.navigasi.content.update');
     });
 });
+
+// Route untuk menyimpan kategori baru (via AJAX POST)
+Route::post('/kategori/store', [NavmenuController::class, 'storeCategory'])->name('kategori.store');
