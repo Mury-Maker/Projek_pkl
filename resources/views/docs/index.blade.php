@@ -11,12 +11,8 @@
     <script src="https://kit.fontawesome.com/f898b05a2e.js" crossorigin="anonymous"></script>
     
     {{-- CKEditor CSS hanya dimuat jika user adalah admin --}}
-    @auth
-        @if(auth()->user()->role === 'admin')
-            <link rel="stylesheet" href="{{ asset('ckeditor/style.css') }}">
-            <link rel="stylesheet" href="https://cdn.ckeditor.com/ckeditor5/45.2.1/ckeditor5.css" crossorigin>
-        @endif
-    @endauth
+    <link rel="stylesheet" href="{{ asset('ckeditor/style.css') }}">
+    <link rel="stylesheet" href="https://cdn.ckeditor.com/ckeditor5/45.2.1/ckeditor5.css" crossorigin>
 
     <style>
         body { font-family: 'Inter', sans-serif; }
@@ -342,6 +338,8 @@
             color: blue;
 
         }
+
+        
     </style>
 </head>
 <body class="bg-gray-100">
@@ -353,19 +351,40 @@
 
                     {{-- Bagian Kiri Header (Logo + Kategori) --}}
                     <div class="header-spacer-left space-x-8">
-                        <a href="{{ route('home') }}" class="text-2xl font-bold text-blue-600">ProjekPKL</a>
-                        
-                        {{-- Dropdown Kategori --}}
+                        <a href="{{ route('docs', ['category' => $currentCategory, 'page' => $currentPage]) }}" class="text-2xl font-bold text-blue-600">{{ $title }}</a>
+                                                
+                        @php use Illuminate\Support\Str; @endphp
+
                         <div class="relative hidden md:block">
                             <button id="category-dropdown-btn" class="flex items-center px-4 py-2 text-base font-medium rounded-lg transition-colors focus:outline-none">
-                                <span id="category-button-text">Kategori</span> <i class="ml-2 fa fa-chevron-down text-xs"></i>
+                                <span id="category-button-text">{{ $title }}</span>
+                                <i class="ml-2 fa fa-chevron-down text-xs"></i>
                             </button>
+
                             <div id="category-dropdown-menu" class="header-dropdown-menu">
-                                <a href="{{ route('docs', ['category' => 'epesantren']) }}" class="px-3 py-2 text-sm font-medium {{ $currentCategory == 'epesantren' ? 'bg-gray-100 text-gray-800' : 'text-gray-700 hover:bg-gray-50' }}" data-category-key="epesantren" data-category-name="Epesantren">Epesantren</a>
-                                <a href="{{ route('docs', ['category' => 'adminsekolah']) }}" class="px-3 py-2 text-sm font-medium {{ $currentCategory == 'adminsekolah' ? 'bg-gray-100 text-gray-800' : 'text-gray-700 hover:bg-gray-50' }}" data-category-key="adminsekolah" data-category-name="Admin Sekolah">Admin Sekolah</a>
+                                @foreach ($categories as $cats)
+                                    @php
+                                        $slug = Str::slug($cats); // Slug untuk URL dan data attribute
+                                        $isActive = $currentCategory === $slug;
+                                    @endphp
+                                    <a href="{{ route('docs', ['category' => $slug]) }}"
+                                    class="px-3 py-2 text-sm font-medium {{ $isActive ? 'bg-gray-100 text-gray-800' : 'text-gray-700 hover:bg-gray-50' }}"
+                                    data-category-key="{{ $slug }}"
+                                    data-category-name="{{ $cats }}">
+                                    {{ $cats }}
+                                    </a>
+                                @endforeach
+                                @auth
+                                    @if(auth()->user()->role === 'admin')
+                                        <div class="border-t border-gray-200 my-1"></div>
+                                        
+                                        <button onclick="openCategoryModal()" class="text-blue-600 hover:underline text-sm" style="padding:10px;">
+                                            + Tambah Kategori
+                                        </button>
+                                    @endif
+                                @endauth
                             </div>
                         </div>
-                    </div>
 
                     {{-- Bagian Tengah Header (untuk Search Button) --}}
                     <div class="search-button-wrapper">
@@ -519,6 +538,31 @@
                     </form>
                 </div>
             </div>
+                        <!-- Modal Tambah Kategori -->
+            <div id="categoryModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">
+                <div class="bg-white w-full max-w-md rounded-lg shadow-lg p-6">
+                    <h2 id="categoryModalTitle" class="text-lg font-semibold mb-4">Tambah Kategori</h2>
+
+                    <form id="categoryForm">
+                        @csrf
+                        <input type="hidden" id="form_category_method" name="_method" value="POST">
+
+                        <div class="mb-4">
+                            <label for="form_category_nama" class="block text-sm font-medium text-gray-700 mb-1">Nama Kategori</label>
+                            <input type="text" id="form_category_nama" name="category" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <div class="flex justify-end space-x-2">
+                            <button type="button" onclick="closeCategoryModal()"
+                                    class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Batal</button>
+                            <button type="submit"
+                                    class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Simpan</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
             {{-- NEW: Delete Confirmation Modal --}}
             <div id="delete-confirm-modal" class="modal">
                 <div id="delete-confirm-modal-content" class="modal-content">
@@ -556,6 +600,68 @@
                 CKEDITOR.replace('editor');
             }
         }
+        function promptNewCategory() {
+            const name = prompt("Masukkan nama kategori baru:");
+            if (name && name.trim() !== '') {
+                const slug = name.trim().toLowerCase().replace(/\s+/g, '-');
+                window.location.href = `/docs/${slug}`;
+            }
+        }
+
+        const categoryModal = document.getElementById('categoryModal');
+        const categoryForm = document.getElementById('categoryForm');
+        const categoryModalTitle = document.getElementById('categoryModalTitle');
+
+        function openCategoryModal(mode = 'create', defaultName = '') {
+            if (!categoryForm || !categoryModalTitle) {
+                alert('Form kategori tidak ditemukan!');
+                return;
+            }
+
+            categoryForm.reset();
+            document.getElementById('form_category_method').value = mode === 'edit' ? 'PUT' : 'POST';
+            document.getElementById('form_category_nama').value = defaultName;
+
+            categoryModalTitle.textContent = mode === 'edit' ? 'Edit Kategori' : 'Tambah Kategori';
+            categoryModal.classList.remove('hidden');
+        }
+
+        function closeCategoryModal() {
+            categoryModal.classList.add('hidden');
+        }
+
+        categoryForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const categoryName = document.getElementById('form_category_nama').value;
+            const method = document.getElementById('form_category_method').value;
+
+            fetch('/kategori/store', {
+                method: method === 'PUT' ? 'PUT' : 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
+                },
+                body: JSON.stringify({ category: categoryName }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Kategori berhasil ditambahkan.');
+                    closeCategoryModal();
+                    location.reload(); // atau perbarui dropdown kategori
+                } else {
+                    alert('Gagal menambahkan kategori.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Terjadi kesalahan.');
+            });
+        });
+
+
+
     </script>
     
     <script>
@@ -944,8 +1050,29 @@
                 const deleteConfirmMessage = document.getElementById('delete-confirm-message');
                 const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
                 const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+                const categoryModal = document.getElementById('categoryModal');
+                const categoryForm = document.getElementById('categoryForm');
+                const categoryModalTitle = document.getElementById('categoryModalTitle');
 
                 let menuToDelete = null;
+
+                function openCategoryModal(mode = 'create', defaultName = '') {
+                    if (!categoryForm || !categoryModalTitle) {
+                        alert('Form kategori tidak ditemukan!');
+                        return;
+                    }
+
+                    categoryForm.reset();
+                    document.getElementById('form_category_method').value = mode === 'edit' ? 'PUT' : 'POST';
+                    document.getElementById('form_category_nama').value = defaultName;
+
+                    categoryModalTitle.textContent = mode === 'edit' ? 'Edit Kategori' : 'Tambah Kategori';
+                    categoryModal.classList.remove('hidden');
+                }
+
+                function closeCategoryModal() {
+                categoryModal.classList.add('hidden');
+            }
                 
 
                 const openMenuModal = (mode, menuData = null, parentId = 0) => {

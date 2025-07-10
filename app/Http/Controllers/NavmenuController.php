@@ -175,4 +175,43 @@ class NavmenuController extends Controller
         $navMenu->docsContent()->update(['content' => $request->content]);
         return response()->json(['success' => 'Konten berhasil diperbarui']);
     }
+    public function storeCategory(Request $request)
+    {
+        // Validasi input
+        $request->validate([
+            'category' => 'required|string|max:50',
+        ]);
+
+        // Cek apakah kategori sudah ada
+        $existing = NavMenu::where('category', $request->category)->first();
+        if ($existing) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kategori sudah ada.'
+            ]);
+        }
+
+        // Buat root menu untuk kategori baru
+        $menu = NavMenu::create([
+            'menu_nama' => '',
+            'menu_link' => '#',
+            'menu_icon' => '',
+            'menu_child' => 0,
+            'menu_order' => 0,
+            'menu_status' => 1,
+            'category' => $request->category,
+        ]);
+
+        // Buat konten default untuk root menu ini
+        $menu->docsContent()->create([
+            'content' => '# Beranda ' . $request->category,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Kategori berhasil ditambahkan.',
+        ]);
+    }
+
+
 }

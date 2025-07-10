@@ -42,11 +42,17 @@ class DocumentationController extends Controller
             ]);
         }
 
+        $categories = NavMenu::select('category')
+        ->whereNotNull('category')
+        ->distinct()
+        ->pluck('category');
+
         // Arahkan ke halaman dokumentasi pertama dari kategori default
         $pageSlug = Str::slug($firstMenu->menu_nama);
         return redirect()->route('docs', [
             'category' => $defaultCategory,
-            'page' => $pageSlug
+            'page' => $pageSlug,
+            'categories' => $categories
         ]);
     }
 
@@ -75,6 +81,11 @@ class DocumentationController extends Controller
             $pageSlug = Str::slug($firstMenu->menu_nama);
             return redirect()->route('docs', ['category' => $category, 'page' => $pageSlug]);
         }
+
+        $categories = NavMenu::select('category')
+            ->whereNotNull('category')
+            ->distinct()
+            ->pluck('category');
 
         $allMenus = NavMenu::where('category', $category)->orderBy('menu_order')->get();
         $navigation = NavMenu::buildTree($allMenus);
@@ -143,6 +154,7 @@ BLADE
             'allParentMenus'    => NavMenu::where('category', $category)->orderBy('menu_nama')->get(['menu_id', 'menu_nama']),
             'viewPath'          => $viewPath,
             'contentDocs'       => $menusWithDocs,
+            'categories'        => $categories,
         ]);
     }
 

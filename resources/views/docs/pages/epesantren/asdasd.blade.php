@@ -1,12 +1,13 @@
-<div id="kontenView" class="main-container">
-    <div class="ck-content">
-        {!! $contentDocs->docsContent->content ?? "Konten Belum Tersedia" !!}
-    </div>
+{{-- Selalu tampilkan konten dokumentasi --}}
+<div id="kontenView" class="ck-content" >
+    {!! $contentDocs->docsContent->content ?? "Konten Belum Tersedia" !!}
 </div>
 
 {{-- Tampilkan editor hanya jika user terautentikasi DAN memiliki role 'admin' --}}
 @auth
     @if(Auth::user()->role === 'admin')
+        <div class="menuid">
+        </div>
         <div class="main-container">
             <div class="editor-container hidden" id="editor-container">
                 <form action="{{ route('docs.save', ['menu_id' => $menu_id]) }}" method="POST">
