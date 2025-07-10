@@ -23,11 +23,13 @@
             } else { // Default untuk menu utama jika level tidak terdefinisi (biasanya level 0)
                 $linkClasses .= ' pl-3 text-sm font-semibold';
             }
+            $isLevel0Or1 = ($level ?? 0) <= 1;
+            $menuHref = $isLevel0Or1 ? '#' : $item->menu_link;
         @endphp
 
         {{-- Kontainer KIRI: Ikon Menu dan Nama Menu --}}
         {{-- Ini adalah A-tag itu sendiri, yang akan mengambil sebagian besar ruang. --}}
-        <a href="{{ $item->menu_link }}" class="{{ $linkClasses }}" style="min-width: 0;">
+        <a href="{{ $menuHref }}" class="{{ $linkClasses }}" style="min-width: 0;">
             {{-- Placeholder atau Ikon --}}
             <div class="w-4 flex-shrink-0 text-center">
                 @if($item->menu_nama == 'Detail Sub 1')

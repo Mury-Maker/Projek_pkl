@@ -8,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://kit.fontawesome.com/f898b05a2e.js" crossorigin="anonymous"></script>
     
     {{-- CKEditor CSS hanya dimuat jika user adalah admin --}}
     @auth
@@ -184,7 +185,11 @@
         .btn-simpan{ background-color: #45a65a; color: white; }
         .btn-batal{ background-color: #00c0ef; color: white; }
         .btn-hapus{ background-color: red; color: white; }
-        .judul-halaman{ margin: 10px 10px 10px 0; }
+        .judul-halaman{ 
+            margin: 10px 10px 10px 0; 
+            display: flex;
+            gap: 12px;
+        }
         .judul-halaman h1{ font-size: 26px }
 
         /* CSS untuk Dropdown Sidebar */
@@ -328,6 +333,15 @@
             font-size: 0.75rem; /* Ukuran ikon lebih kecil */
             transition: transform 0.2s ease-in-out;
         }
+
+        .hidden {
+            display: none;
+        }
+
+        #editBtn:hover{
+            color: blue;
+
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -369,7 +383,7 @@
                         @auth
                             {{-- Tampilkan role pengguna jika sudah login --}}
                             <span class="text-sm font-medium text-gray-700">
-                                Role: <span class="font-semibold">{{ ucfirst(auth()->user()->role) }}</span>
+                                Selamat Datang: <span class="font-semibold">{{ ucfirst(auth()->user()->role) }}</span>
                             </span>
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
@@ -427,7 +441,13 @@
                     @endif
                 @endauth
                 <div class="judul-halaman">
-                    <h1> {!! ucfirst($currentPage) !!}</h1>
+                    <h1> {!! ucfirst($currentPage) !!} 
+                    </h1>
+                    @auth
+                        @if(auth()->user()->role === 'admin')
+                            <button id="editBtn" onclick="openEditor()"><i class="fa-solid fa-file-pen"></i></button>
+                        @endif    
+                    @endauth
                 </div>
                 <div class="prose max-w-none" id="documentation-content" >
                     @include($viewPath)
@@ -489,7 +509,7 @@
                         <div class="mb-6">
                             <label class="inline-flex items-center">
                                 <input type="checkbox" id="form_menu_status" name="menu_status" value="1" class="form-checkbox h-5 w-5 text-blue-600">
-                                <span class="ml-2 text-gray-700">Aktifkan Menu</span>
+                                <span class="ml-2 text-gray-700">Centang Jika ingin menu ini tidak bisa memiliki anak</span>
                             </label>
                         </div>
                         <div class="flex items-center justify-end space-x-3">
@@ -521,6 +541,22 @@
             <script src="{{ asset('ckeditor/main.js') }}"></script>
         @endif
     @endauth
+
+    <script>
+        function openEditor() {
+            const kontenView = document.getElementById('kontenView');
+            const editorContainer = document.getElementById('editor-container');
+
+        // Sembunyikan tampilan view dan tampilkan editor
+            kontenView.classList.add('hidden');
+            editorContainer.classList.remove('hidden');
+
+        // Inisialisasi CKEditor jika belum
+            if (!CKEDITOR.instances.editor) {
+                CKEDITOR.replace('editor');
+            }
+        }
+    </script>
     
     <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -910,6 +946,7 @@
                 const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
 
                 let menuToDelete = null;
+                
 
                 const openMenuModal = (mode, menuData = null, parentId = 0) => {
                     if (!menuForm || !modalTitleElement) {
@@ -950,7 +987,7 @@
                                 document.getElementById('form_menu_icon').value = menuData.menu_icon;
                                 formMenuChildSelect.value = menuData.menu_child;
                                 document.getElementById('form_menu_order').value = menuData.menu_order;
-                                document.getElementById('form_menu_status').checked = menuData.menu_status == 1;
+                                document.getElementById('form_menu_status').checked = menuData.menu_status == 0;
                             }
                         })
                         .catch(error => {
