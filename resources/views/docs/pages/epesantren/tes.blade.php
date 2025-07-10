@@ -1,5 +1,5 @@
 {{-- Selalu tampilkan konten dokumentasi --}}
-<div class="ck-content">
+<div id="kontenView" class="ck-content" >
     {!! $contentDocs->docsContent->content ?? "Konten Belum Tersedia" !!}
 </div>
 
@@ -9,7 +9,7 @@
         <div class="menuid">
         </div>
         <div class="main-container">
-            <div class="editor-container" id="editor-container">
+            <div class="editor-container hidden" id="editor-container">
                 <form action="{{ route('docs.save', ['menu_id' => $menu_id]) }}" method="POST">
                     @csrf
                     <textarea name="content" id="editor" class="ckeditor">
