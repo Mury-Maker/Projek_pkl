@@ -1,9 +1,23 @@
 @foreach($items as $item)
 <div class="my-0.5 group">
     {{-- Container utama item menu --}}
-    <div class="flex items-center justify-between py-1.5 rounded-md hover:bg-gray-100 transition-colors
-        {{ (isset($selectedNavItemId) && $selectedNavItemId == $item->menu_id) ? 'bg-blue-100 font-semibold' : '' }}
-        sidebar-menu-item-wrapper">
+    <div class="
+        flex items-center justify-between py-1.5 rounded-md
+        transition-all duration-200 ease-in-out
+        relative group-hover:z-10
+        sidebar-menu-item-wrapper
+        
+        {{-- Efek hover kotak yang baru --}}
+        hover:bg-gray-100
+        hover:shadow-md
+        hover:scale-[1.02]
+        transform-gpu
+
+        {{-- PERUBAHAN DI SINI: Tambahkan shadow dan scale saat terpilih --}}
+        @if(isset($selectedNavItemId) && $selectedNavItemId == $item->menu_id)
+            bg-blue-100 font-semibold shadow-md scale-[1.02]
+        @endif
+    ">
 
         {{-- Menentukan kelas font di sini, lalu menambahkannya ke atribut class A --}}
         @php
