@@ -44,7 +44,6 @@
         @if($isParent)
                 <button
                     type="button"
-                    class="menu-arrow-icon text-gray-500 p-2"
                     data-toggle="submenu-{{ $item->menu_id }}"
                     aria-expanded="false"
                     aria-controls="submenu-{{ $item->menu_id }}"

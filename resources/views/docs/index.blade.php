@@ -424,7 +424,7 @@
 
                         <div class="relative hidden md:block">
                             <button id="category-dropdown-btn" class="flex items-center px-4 py-2 text-base font-medium rounded-lg transition-colors focus:outline-none">
-                                <span id="category-button-text">{{ $title }}</span>
+                                <span id="category-button-text">{!! ucwords(str_replace('-',' ',$currentCategory)) !!}</span>
                                 <i class="ml-2 fa fa-chevron-down text-xs"></i>
                             </button>
 
