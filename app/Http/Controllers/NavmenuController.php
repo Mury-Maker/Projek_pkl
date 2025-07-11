@@ -190,16 +190,20 @@ class NavmenuController extends Controller
                 'message' => 'Kategori sudah ada.'
             ]);
         }
-
-        // Buat root menu untuk kategori baru
+        
+        $categoryName = Str::headline($request->category); // "epesantren-digital" => "Epesantren Digital"
         $menu = NavMenu::create([
-            'menu_nama' => '',
+            'menu_nama' => 'Beranda ' . $categoryName,
             'menu_link' => '#',
             'menu_icon' => '',
             'menu_child' => 0,
             'menu_order' => 0,
             'menu_status' => 1,
             'category' => $request->category,
+        ]);
+
+        $menu->docsContent()->create([
+            'content' => '# Beranda ' . $categoryName,
         ]);
 
         // Buat konten default untuk root menu ini

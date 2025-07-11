@@ -37,16 +37,19 @@ class DocumentationController extends Controller
             ->distinct()
             ->pluck('category');
 
-        if ($firstMenu) {
+        if ($firstMenu && trim($firstMenu->menu_nama) !== '') {
             $pageSlug = Str::slug($firstMenu->menu_nama);
-            return redirect()->route('docs', [
-                'category' => $defaultCategory,
-                'page' => $pageSlug,
-                'categories' => $categories,
-            ]);
+            if ($pageSlug !== '') {
+                return redirect()->route('docs', [
+                    'category' => $defaultCategory,
+                    'page' => $pageSlug,
+                    'categories' => $categories,
+                ]);
+            }
         }
 
-        return $this->renderNoContentFallback($defaultCategory, collect()); // Pass empty collection for navigation
+        // Jika tidak ada menu valid, tampilkan fallback
+        return $this->renderNoContentFallback($defaultCategory, collect());
     }
 
     /**
@@ -76,17 +79,20 @@ class DocumentationController extends Controller
         if (is_null($page)) {
             $firstMenuInCat = $allMenus->where('menu_child', 0)->sortBy('menu_order')->first();
 
-            if ($firstMenuInCat) {
-                // Redirect ke item menu pertama dari kategori
-                return redirect()->route('docs', [
-                    'category' => $category,
-                    'page' => Str::slug($firstMenuInCat->menu_nama)
-                ]);
-            } else {
-                // Jika kategori ini kosong (tidak ada menu sama sekali), tampilkan fallback 'tidak ada konten'
-                return $this->renderNoContentFallback($category, $navigation);
+            if ($firstMenuInCat && trim($firstMenuInCat->menu_nama) !== '') {
+                $pageSlug = Str::slug($firstMenuInCat->menu_nama);
+                if ($pageSlug !== '') {
+                    return redirect()->route('docs', [
+                        'category' => $category,
+                        'page' => $pageSlug,
+                    ]);
+                }
             }
+
+            // Jika tidak ada menu valid
+            return $this->renderNoContentFallback($category, $navigation);
         }
+
 
 
         // KASUS 2: Jika $page diberikan, cari item navigasi yang cocok
@@ -127,13 +133,11 @@ class DocumentationController extends Controller
         ]);
     }
 
-
-
     private function renderNoContentFallback($category, $navigation): View
     {
         $fallbackPageName = 'no-content-available';
 
-        
+
         $categories = NavMenu::select('category')
             ->whereNotNull('category')
             ->distinct()
