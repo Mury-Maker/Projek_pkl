@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://kit.fontawesome.com/f898b05a2e.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     {{-- CKEditor CSS hanya dimuat jika user adalah admin --}}
     <link rel="stylesheet" href="{{ asset('ckeditor/style.css') }}">
@@ -307,20 +308,41 @@
 
         /* Kustomisasi untuk tombol dropdown Kategori */
         #category-dropdown-btn {
-            background-color: #ffffff; /* bg-gray-200 */
-            color: #4a5568; /* text-gray-700 */
-            border: 1px solid #4a5568; /* Garis luar gelap */
-            padding: 10px 16px; /* Menyesuaikan padding agar lebih proporsional */
-            border-radius: 8px; /* Sudut membulat */
-            font-weight: 500; /* font-medium */
-            display: inline-flex; /* Agar ikon dan teks bisa diatur sejajar */
-            align-items: center; /* Pusatkan secara vertikal */
-            transition: all 0.2s ease-in-out; /* Transisi halus untuk hover */
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* Sedikit shadow */
+            background: linear-gradient(135deg, #4f46e5, #3b82f6); /* ungu ke biru */
+            color: #fff;
+            border: none;
+            font-weight: 600;
+            transition: background-color 0.3s ease, transform 0.2s ease;
         }
 
         #category-dropdown-btn:hover {
-            background-color: #cbd5e0; /* Sedikit lebih gelap saat hover */
+            background: linear-gradient(135deg, #6366f1, #60a5fa);
+            transform: translateY(-1px);
+        }
+
+        /* Dropdown menu */
+        #category-dropdown-menu {
+            background-color: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            padding: 4px 0;
+        }
+
+        /* Link dalam dropdown */
+        #category-dropdown-menu a {
+            padding: 10px 16px;
+            display: block;
+            font-size: 14px;
+            color: #4b5563;
+            text-decoration: none;
+            transition: background-color 0.2s ease, color 0.2s ease;
+            position: relative;
+        }
+
+        #category-dropdown-menu a:hover {
+            background-color: #f3f4f6;
+            color: #111827;
         }
 
         #category-dropdown-btn .fa-chevron-down,
@@ -328,6 +350,26 @@
             margin-left: 8px; /* Jarak antara teks dan ikon */
             font-size: 0.75rem; /* Ukuran ikon lebih kecil */
             transition: transform 0.2s ease-in-out;
+        }
+
+        /* Aktif state */
+        #category-dropdown-menu a.bg-gray-100 {
+            background-color: #e0f2fe !important;
+            color: #1d4ed8 !important;
+            font-weight: 600;
+        }
+
+        /* Tambahan efek garis warna samping aktif */
+        #category-dropdown-menu a.bg-gray-100::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 4px;
+            height: 100%;
+            background-color: #3b82f6;
+            border-top-left-radius: 10px;
+            border-bottom-left-radius: 10px;
         }
 
         .hidden {
@@ -338,7 +380,32 @@
             color: blue;
 
         }
+        /* Tombol Logout */
+        .logout-btn {
+            background-color: #ef4444; /* merah */
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
 
+        .logout-btn:hover {
+            background-color: #dc2626; /* merah lebih gelap saat hover */
+            transform: translateY(-1px);
+        }
+
+        /* Responsif tambahan opsional */
+        @media (max-width: 640px) {
+            .header-spacer-right {
+                flex-direction: column;
+                gap: 8px;
+            }
+        }
         
     </style>
 </head>
@@ -398,20 +465,22 @@
                     </div>
 
                     {{-- Bagian Kanan Header (Login/Logout) --}}
-                    <div class="header-spacer-right space-x-4">
+                    <div class="header-spacer-right space-x-4 flex items-center">
                         @auth
-                            {{-- Tampilkan role pengguna jika sudah login --}}
-                            <span class="text-sm font-medium text-gray-700">
-                                Selamat Datang: <span class="font-semibold">{{ ucfirst(auth()->user()->role) }}</span>
+                            {{-- Tampilkan role pengguna --}}
+                            <span class="user-role-badge">
+                                Selamat Datang:
+                                <span class="role-text">{{ ucfirst(auth()->user()->role) }}</span>
                             </span>
-                            <form method="POST" action="{{ route('logout') }}">
+                    
+                            <form id="logout-form" method="POST" action="{{ route('logout') }}">
                                 @csrf
-                                <button type="submit" class="text-sm font-medium text-gray-600 hover:text-gray-900">Log Out</button>
+                                <button type="submit" class="logout-btn" id="logout-btn">Log Out</button>
                             </form>
                         @else
-                            <a href="{{ route('login') }}" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">Log In</a>
+                            <a href="{{ route('login') }}" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition">Log In</a>
                         @endauth
-                    </div>
+                    </div>                    
                 </div>
             </div>
         </header>
@@ -667,6 +736,31 @@
     <script>
     document.addEventListener('DOMContentLoaded', () => {
         // =================================
+        // Verifikasi Logout
+        // =================================
+        const logoutForm = document.getElementById('logout-form');
+        const logoutBtn = document.getElementById('logout-btn');
+
+        logoutBtn.addEventListener('click', function (e) {
+            e.preventDefault(); // selalu hentikan submit dulu
+
+            Swal.fire({
+                title: 'Yakin ingin logout?',
+                text: "Sesi Anda akan berakhir.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Ya, Logout',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    logoutForm.submit(); // hanya submit jika dikonfirmasi
+                }
+            });
+        });
+
+        // =================================
         // VARIABEL & FUNGSI UTILITAS (GLOBAL)
         // =================================
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
@@ -872,37 +966,65 @@
         // =================================
 
         const sidebar = document.getElementById('sidebar-navigation');
+        const currentPathname = window.location.pathname; // Dapatkan path URL saat ini
+        const urlParams = new URLSearchParams(window.location.search);
+        const selectedMenuIdFromUrl = urlParams.get('page'); // Asumsi 'page' param mengandung menu_id yang dipilih
+
         if (sidebar) {
             sidebar.addEventListener('click', (e) => {
                 const trigger = e.target.closest('.menu-arrow-icon');
-                if (!trigger) return;
+                const menuLink = e.target.closest('.menu-link'); // Tangkap klik pada link menu juga
 
-                e.preventDefault();
+                // Handle dropdown toggle for parent menus
+                if (trigger) {
+                    e.preventDefault();
 
-                const submenuId = trigger.dataset.toggle;
-                const submenu = document.getElementById(submenuId);
-                const icon = trigger.querySelector('i');
+                    const submenuId = trigger.dataset.toggle;
+                    const submenu = document.getElementById(submenuId);
+                    const icon = trigger.querySelector('i');
 
-                if (submenu) {
-                    const isCurrentlyOpen = submenu.classList.contains('open');
+                    if (submenu) {
+                        const isCurrentlyOpen = submenu.classList.contains('open');
 
-                    const allOpenSubmenus = sidebar.querySelectorAll('.submenu-container.open');
-                    allOpenSubmenus.forEach(openSubmenu => {
-                        if (openSubmenu !== submenu && !submenu.contains(openSubmenu) && !openSubmenu.contains(submenu)) {
-                            openSubmenu.classList.remove('open');
-                            const relatedTrigger = sidebar.querySelector(`[data-toggle="${openSubmenu.id}"]`);
-                            if (relatedTrigger) {
-                                relatedTrigger.setAttribute('aria-expanded', 'false');
-                                relatedTrigger.querySelector('i')?.classList.remove('open');
+                        // Close other top-level submenus to avoid too many open at once
+                        // This part is good, keep it as is if you want only one top-level submenu open
+                        const allOpenSubmenus = sidebar.querySelectorAll('.submenu-container.open');
+                        allOpenSubmenus.forEach(openSubmenu => {
+                            // Only close if it's not the current submenu being toggled
+                            // and not a parent of the current submenu being toggled
+                            if (openSubmenu !== submenu && !submenu.contains(openSubmenu)) {
+                                // Check if openSubmenu is NOT an ancestor of the currently selected item
+                                let isAncestorOfSelectedItem = false;
+                                let tempParent = submenu;
+                                while (tempParent && tempParent !== sidebar) {
+                                    if (tempParent === openSubmenu) {
+                                        isAncestorOfSelectedItem = true;
+                                        break;
+                                    }
+                                    tempParent = tempParent.parentElement.closest('.submenu-container');
+                                }
+                                if (!isAncestorOfSelectedItem) {
+                                    openSubmenu.classList.remove('open');
+                                    const relatedTrigger = sidebar.querySelector(`[data-toggle="${openSubmenu.id}"]`);
+                                    if (relatedTrigger) {
+                                        relatedTrigger.setAttribute('aria-expanded', 'false');
+                                        relatedTrigger.querySelector('i')?.classList.remove('open');
+                                    }
+                                }
                             }
-                        }
-                    });
+                        });
 
-                    submenu.classList.toggle('open');
-                    trigger.setAttribute('aria-expanded', isCurrentlyOpen ? 'false' : 'true');
-                    if (icon) {
-                        icon.classList.toggle('open', !isCurrentlyOpen);
+                        submenu.classList.toggle('open');
+                        trigger.setAttribute('aria-expanded', isCurrentlyOpen ? 'false' : 'true');
+                        if (icon) {
+                            icon.classList.toggle('open', !isCurrentlyOpen);
+                        }
                     }
+                } else if (menuLink) {
+                    // If a menu link is clicked, ensure its parent is open before navigation
+                    // This is less about keeping it open after reload, and more about visual state before navigation
+                    // However, the `openActiveMenuParents` will handle persistence after reload.
+                    // No `e.preventDefault()` here if you want the link to navigate normally.
                 }
             });
         }
@@ -912,20 +1034,29 @@
             if (!sidebarElement) return;
 
             const openActiveMenuParents = () => {
-                const activeItemContainer = sidebarElement.querySelector('.bg-blue-100')?.closest('.my-1');
-                if (activeItemContainer) {
-                    let currentSubmenu = activeItemContainer.closest('.submenu-container');
-                    while (currentSubmenu) {
-                        currentSubmenu.classList.add('open');
-                        const triggerButton = sidebarElement.querySelector(`[data-toggle="${currentSubmenu.id}"]`);
-                        if (triggerButton) {
-                            const icon = triggerButton.querySelector('i');
-                            if (icon) {
-                                icon.classList.add('open');
-                                triggerButton.setAttribute('aria-expanded', 'true');
+                // Find the currently active menu item based on the selectedNavItemId from Blade
+                // We assume $selectedNavItem->menu_id is passed from Laravel to JS via Blade.
+                // Example: const selectedMenuItemElement = sidebarElement.querySelector(`[data-menu-id="${selectedNavItemId}"]`);
+                // You already have a .bg-blue-100 class for the active item.
+                const activeItemElement = sidebarElement.querySelector('.bg-blue-100');
+
+                if (activeItemElement) {
+                    // Find all parent submenu containers for the active item
+                    let currentElement = activeItemElement;
+                    while (currentElement && currentElement !== sidebarElement) {
+                        if (currentElement.classList.contains('submenu-container')) {
+                            currentElement.classList.add('open');
+                            // Also update the arrow icon of its trigger
+                            const triggerButton = sidebarElement.querySelector(`[data-toggle="${currentElement.id}"]`);
+                            if (triggerButton) {
+                                const icon = triggerButton.querySelector('i');
+                                if (icon) {
+                                    icon.classList.add('open'); // Rotate the arrow
+                                    triggerButton.setAttribute('aria-expanded', 'true');
+                                }
                             }
                         }
-                        currentSubmenu = currentSubmenu.parentElement.closest('.submenu-container');
+                        currentElement = currentElement.parentElement; // Move up the DOM tree
                     }
                 }
             };
@@ -938,6 +1069,28 @@
         // =================================
         // LOGIKA DROPDOWN KATEGORI HEADER
         // =================================
+        const button = document.getElementById('category-dropdown-btn');
+        const menu = document.getElementById('category-dropdown-menu');
+
+        button.addEventListener('click', () => {
+            const isVisible = menu.classList.contains('opacity-100');
+
+            if (isVisible) {
+                menu.classList.remove('opacity-100', 'visible');
+                menu.classList.add('opacity-0', 'invisible');
+            } else {
+                menu.classList.remove('opacity-0', 'invisible');
+                menu.classList.add('opacity-100', 'visible');
+            }
+        });
+
+        // Optional: close menu if clicking outside
+        document.addEventListener('click', function (e) {
+            if (!button.contains(e.target) && !menu.contains(e.target)) {
+                menu.classList.remove('opacity-100', 'visible');
+                menu.classList.add('opacity-0', 'invisible');
+            }
+        });
         const categoryDropdownBtn = document.getElementById('category-dropdown-btn');
         const categoryDropdownText = document.getElementById('category-button-text'); // Dapatkan elemen span
         const categoryDropdownMenu = document.getElementById('category-dropdown-menu');
