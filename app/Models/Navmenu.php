@@ -87,6 +87,12 @@ class NavMenu extends Model
                 $branch[] = $item;
             }
         }
+
+        // Sort the branch by menu_order before returning
+        usort($branch, function($a, $b) {
+            return $a->menu_order <=> $b->menu_order;
+        });
+
         return $branch;
     }
 }
