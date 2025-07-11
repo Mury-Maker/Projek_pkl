@@ -28,29 +28,29 @@ class NavmenuController extends Controller
     public function getParentMenus(Request $request, $category)
     {
         $query = NavMenu::where('category', $category)
-                         ->where('menu_status', 0) // Hanya menu aktif yang bisa jadi parent
-                         ->orderBy('menu_nama');
-    
+            ->where('menu_status', 0) // Hanya menu aktif yang bisa jadi parent
+            ->orderBy('menu_nama');
+
         // PERBAIKAN: Logika untuk mengecualikan menu yang sedang diedit dan anak-anaknya.
         if ($request->has('editing_menu_id')) {
             $editingMenuId = $request->input('editing_menu_id');
-            
+
             // 1. Exclude the menu itself from the parent list
             $query->where('menu_id', '!=', $editingMenuId);
-    
+
             // 2. Efficiently exclude descendants of the editing menu to prevent circular references
             // This is a more robust way to get all descendants.
             $descendantIds = $this->getDescendantIds($editingMenuId);
-            
+
             if (!empty($descendantIds)) {
                 $query->whereNotIn('menu_id', $descendantIds);
             }
         }
-    
+
         $parents = $query->get(['menu_id', 'menu_nama']);
         return response()->json($parents);
     }
-    
+
     /**
      * Helper function to recursively get all descendant IDs for a given parent.
      */
@@ -58,12 +58,12 @@ class NavmenuController extends Controller
     {
         $descendantIds = [];
         $children = NavMenu::where('menu_child', $parentId)->pluck('menu_id')->toArray();
-        
+
         foreach ($children as $childId) {
             $descendantIds[] = $childId;
             $descendantIds = array_merge($descendantIds, $this->getDescendantIds($childId));
         }
-    
+
         return array_unique($descendantIds);
     }
 
@@ -108,10 +108,10 @@ class NavmenuController extends Controller
                 'menu_status' => $request->has('menu_status') ? 1 : 0,
                 'category' => $request->category,
             ]);
-
-            $menu->docsContent()->create(['content' => '# ' . $request->menu_nama]);
+            $initialContent = '# ' . $request->menu_nama . "\n\nBelum ada konten untuk halaman ini. Silakan edit untuk menambahkan.";
+            $menu->docsContent()->create(['content' => $initialContent]); // <-- UBAH DI SINI
         });
-        
+
         return response()->json(['success' => 'Menu berhasil ditambahkan!']);
     }
 
@@ -149,7 +149,7 @@ class NavmenuController extends Controller
             $navMenu->docsContent()->delete();
             $navMenu->delete();
         });
-        
+
         return response()->json(['success' => 'Menu dan semua sub-menu berhasil dihapus!']);
     }
 
@@ -212,6 +212,4 @@ class NavmenuController extends Controller
             'message' => 'Kategori berhasil ditambahkan.',
         ]);
     }
-
-
 }

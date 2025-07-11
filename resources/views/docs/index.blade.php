@@ -351,7 +351,7 @@
 
                     {{-- Bagian Kiri Header (Logo + Kategori) --}}
                     <div class="header-spacer-left space-x-8">
-                        <a href="{{ route('docs', ['category' => $currentCategory, 'page' => $currentPage]) }}" class="text-2xl font-bold text-blue-600">{{ $title }}</a>
+                        <a href="{{ route('docs', ['category' => $currentCategory]) }}" class="text-2xl font-bold text-blue-600">{!! ucwords(str_replace('-',' ',$currentCategory)) !!}</a>
                                                 
                         @php use Illuminate\Support\Str; @endphp
 
@@ -371,7 +371,7 @@
                                     class="px-3 py-2 text-sm font-medium {{ $isActive ? 'bg-gray-100 text-gray-800' : 'text-gray-700 hover:bg-gray-50' }}"
                                     data-category-key="{{ $slug }}"
                                     data-category-name="{{ $cats }}">
-                                    {{ $cats }}
+                                     {!! ucwords(str_replace('-',' ',$cats)) !!}
                                     </a>
                                 @endforeach
                                 @auth
@@ -450,26 +450,53 @@
 
             {{-- Main Content --}}
             <main class="flex-1 overflow-y-auto p-8 lg:p-12 relative" style="background-color: white">
-                @auth
-                    @if(auth()->user()->role === 'admin')
-                        @if (isset($selectedNavItem))
-                            <div class="absolute top-8 right-8 z-10">
-                                {{-- Tombol Edit/Delete Konten ada di sini atau diinclude dari viewPath --}}
-                            </div>
-                        @endif
-                    @endif
-                @endauth
                 <div class="judul-halaman">
-                    <h1> {!! ucfirst($currentPage) !!} 
+                    <h1> {!! ucfirst(Str::headline($currentPage)) !!} {{-- Use Str::headline for better display of slugs --}}
                     </h1>
                     @auth
                         @if(auth()->user()->role === 'admin')
-                            <button id="editBtn" onclick="openEditor()"><i class="fa-solid fa-file-pen"></i></button>
-                        @endif    
+                            {{-- Hanya tampilkan tombol edit jika ada menu_id yang valid --}}
+                            @if(isset($menu_id) && $menu_id > 0)
+                                <button id="editBtn" onclick="openEditor()"><i class="fa-solid fa-file-pen"></i></button>
+                            @endif
+                        @endif
                     @endauth
                 </div>
-                <div class="prose max-w-none" id="documentation-content" >
-                    @include($viewPath)
+
+                {{-- Konten Dokumentasi dan Editor (berada langsung di index.blade.php) --}}
+                <div class="prose max-w-none" id="documentation-content">
+                    {{-- Tampilan konten dari database --}}
+                    <div id="kontenView" class="ck-content">
+                        {{-- Menggunakan $contentDocs untuk menampilkan konten --}}
+                        {!! $contentDocs->docsContent->content ?? "Konten Belum Tersedia" !!}
+                    </div>
+
+                    {{-- Editor CKEditor (hanya untuk admin dan jika ada menu_id yang valid) --}}
+                    @auth
+                        @if(auth()->user()->role === 'admin')
+                            {{-- Editor hanya ditampilkan jika ada item navigasi yang dipilih (menu_id > 0) --}}
+                            @if(isset($menu_id) && $menu_id > 0)
+                                <div class="main-container">
+                                    <div class="editor-container hidden" id="editor-container">
+                                        <form id="editor-form" action="{{ route('docs.save', ['menu_id' => $menu_id]) }}" method="POST">
+                                            @csrf
+                                            {{-- Tambahkan hidden input untuk category dan page untuk redirect setelah save --}}
+                                            <input type="hidden" name="currentCategoryFromForm" value="{{ $currentCategory }}">
+                                            <input type="hidden" name="currentPageFromForm" value="{{ $currentPage }}">
+
+                                            <textarea name="content" id="editor" class="ckeditor">
+                                                {{ $contentDocs->docsContent->content ?? "" }}
+                                            </textarea>
+                                            <div class="buttons">
+                                                <button type="submit" class="btn btn-simpan">Update</button>
+                                                <button type="button" id="cancel-editor-btn" class="btn btn-batal"><a href="{{ route('docs', ['category' => $currentCategory, 'page' => $currentPage]) }}">Batal</a></button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            @endif
+                        @endif
+                    @endauth
                 </div>
             </main>
         </div>
@@ -528,7 +555,7 @@
                         <div class="mb-6">
                             <label class="inline-flex items-center">
                                 <input type="checkbox" id="form_menu_status" name="menu_status" value="1" class="form-checkbox h-5 w-5 text-blue-600">
-                                <span class="ml-2 text-gray-700">Centang Jika ingin menu ini tidak bisa memiliki anak</span>
+                                <span class="ml-2 text-gray-700">Centang Jika Ingin Menu Ini Memiliki Konten</span>
                             </label>
                         </div>
                         <div class="flex items-center justify-end space-x-3">
@@ -585,6 +612,31 @@
             <script src="{{ asset('ckeditor/main.js') }}"></script>
         @endif
     @endauth
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('[data-toggle^="submenu-"]').forEach(el => {
+                el.addEventListener('click', () => {
+                    const targetId = el.getAttribute('data-toggle');
+                    const submenu = document.getElementById(targetId);
+                    const icon = el.closest('.sidebar-menu-item-wrapper')?.querySelector('.fa-chevron-left');
+
+                    if (submenu) {
+                        const expanded = el.getAttribute('aria-expanded') === 'true';
+                        el.setAttribute('aria-expanded', !expanded);
+                        submenu.classList.toggle('hidden');
+
+                        if (icon) {
+                            icon.classList.toggle('rotate-[-90deg]', !expanded);
+                            icon.classList.toggle('rotate-0', expanded);
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+
+    
 
     <script>
         function openEditor() {

@@ -4,17 +4,16 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DocumentationController;
 use App\Http\Controllers\CKEditorController;
 use App\Http\Controllers\NavmenuController;
-use App\Models\NavMenu;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Auth; // Tambahkan ini untuk Auth::check()
+use Illuminate\Support\Facades\Auth;
 
 // Mengatur rute root '/'
 Route::get('/', function () {
     if (Auth::check()) {
-        // Jika sudah login, arahkan ke halaman dokumentasi default
-        return redirect()->route('docs', ['category' => 'epesantren']);
+        // If logged in, redirect to default documentation page
+        return redirect()->route('docs.index'); // Changed to just 'docs'
     }
-    // Jika belum login, arahkan ke halaman login
+    // If not logged in, redirect to login page
     return redirect()->route('login');
 })->name('home');
 
@@ -28,7 +27,7 @@ Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->midd
 // Grup rute yang memerlukan autentikasi untuk mengakses dokumentasi dan fungsionalitas terkait
 Route::middleware('auth')->group(function () {
     // Rute Dokumentasi - sekarang hanya bisa diakses setelah login
-    Route::get('/docs', [DocumentationController::class, 'index'])->name('docs.index'); // Tambahkan rute index jika belum ada
+    Route::get('/docs', [DocumentationController::class, 'index'])->name('docs.index'); 
     Route::get('/docs/{category}/{page?}', [DocumentationController::class, 'show'])->name('docs');
 
     // Rute API dan fungsionalitas terkait dokumentasi yang memerlukan autentikasi

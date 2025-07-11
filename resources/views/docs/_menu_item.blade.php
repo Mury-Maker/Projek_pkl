@@ -23,27 +23,52 @@
             } else { // Default untuk menu utama jika level tidak terdefinisi (biasanya level 0)
                 $linkClasses .= ' pl-3 text-sm font-semibold';
             }
-            $isLevel0Or1 = ($level ?? 0) <= 1;
-            $menuHref = $isLevel0Or1 ? '#' : $item->menu_link;
-        @endphp
+            $isParent = $item->menu_status == 0;
+            $menuHref = $isParent ? '#' : $item->menu_link;
 
+        @endphp
+        @if($isParent)
+                <button
+                    type="button"
+                    class="menu-arrow-icon text-gray-500 p-2"
+                    data-toggle="submenu-{{ $item->menu_id }}"
+                    aria-expanded="false"
+                    aria-controls="submenu-{{ $item->menu_id }}"
+                    aria-label="Toggle submenu for {{ $item->menu_nama }}">
+                    <a href="{{ $menuHref }}" class="{{ $linkClasses }}" style="min-width: 0;">
+                        {{-- Placeholder atau Ikon --}}
+                        <div class="w-4 flex-shrink-0 text-center">
+                            @if($item->menu_nama == 'Detail Sub 1')
+                                <i class="fas fa-circle text-[0.4em]"></i>
+                            @elseif($item->menu_icon)
+                                <i class="{{ $item->menu_icon }}"></i>
+                            @else
+                                <span class="w-1"></span> {{-- Placeholder jika tidak ada ikon --}}
+                            @endif
+                        </div>
+        
+                        {{-- Nama Menu --}}
+                        <span class="ml-2 flex-grow min-w-0 truncate">{{ $item->menu_nama }}</span>
+                    </a>
+                </button>
+        @else
+            <a href="{{ $menuHref }}" class="{{ $linkClasses }}" style="min-width: 0;">
+                {{-- Placeholder atau Ikon --}}
+                <div class="w-4 flex-shrink-0 text-center">
+                    @if($item->menu_nama == 'Detail Sub 1')
+                        <i class="fas fa-circle text-[0.4em]"></i>
+                    @elseif($item->menu_icon)
+                        <i class="{{ $item->menu_icon }}"></i>
+                    @endif
+                </div>
+
+                {{-- Nama Menu --}}
+                <span class="ml-2 flex-grow min-w-0 truncate">{{ $item->menu_nama }}</span>
+            </a>
+                
+        @endif
         {{-- Kontainer KIRI: Ikon Menu dan Nama Menu --}}
         {{-- Ini adalah A-tag itu sendiri, yang akan mengambil sebagian besar ruang. --}}
-        <a href="{{ $menuHref }}" class="{{ $linkClasses }}" style="min-width: 0;">
-            {{-- Placeholder atau Ikon --}}
-            <div class="w-4 flex-shrink-0 text-center">
-                @if($item->menu_nama == 'Detail Sub 1')
-                    <i class="fas fa-circle text-[0.4em]"></i>
-                @elseif($item->menu_icon)
-                    <i class="{{ $item->menu_icon }}"></i>
-                @else
-                    <span class="w-4"></span> {{-- Placeholder jika tidak ada ikon --}}
-                @endif
-            </div>
-
-            {{-- Nama Menu --}}
-            <span class="ml-2 flex-grow min-w-0 truncate">{{ $item->menu_nama }}</span>
-        </a>
 
         {{-- Kontainer KANAN: Tombol Admin dan Panah Dropdown --}}
         {{-- Ini akan memiliki lebar yang fleksibel saat tidak ada admin, dan lebar tetap saat ada admin --}}
@@ -82,7 +107,8 @@
             {{-- Panah Dropdown --}}
             {{-- Pastikan ini di paling kanan. Gunakan ml-auto saat tidak ada editorMode aktif. --}}
             <div class="flex-shrink-0 w-8 h-8 flex items-center justify-center pr-3 {{ !isset($editorMode) || !$editorMode ? 'ml-auto' : '' }}"> {{-- **PERUBAHAN: ml-auto kondisional** --}}
-                @if(!empty($item->children))
+                @if($item->menu_status == 0)
+
                 <button
                     type="button"
                     class="menu-arrow-icon text-gray-500 p-2"
@@ -99,7 +125,7 @@
         </div>
     </div>
 
-    @if(!empty($item->children))
+    @if($item->menu_status == 0)
         <div id="submenu-{{ $item->menu_id }}" class="submenu-container mt-1 border-l border-gray-200" role="region" aria-label="Submenu for {{ $item->menu_nama }}">
             @include('docs._menu_item', [
                 'items' => $item->children,
