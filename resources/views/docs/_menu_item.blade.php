@@ -37,6 +37,7 @@
             } else { // Default untuk menu utama jika level tidak terdefinisi (biasanya level 0)
                 $linkClasses .= ' pl-3 text-sm font-semibold';
             }
+
             $isParent = $item->menu_status == 0;
             $menuHref = $isParent ? '#' : $item->menu_link;
 
@@ -59,7 +60,6 @@
                                 <span class="w-1"></span> {{-- Placeholder jika tidak ada ikon --}}
                             @endif
                         </div>
-        
                         {{-- Nama Menu --}}
                         <span class="ml-2 flex-grow min-w-0 truncate">{{ $item->menu_nama }}</span>
                     </a>
