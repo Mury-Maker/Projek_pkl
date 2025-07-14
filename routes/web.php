@@ -1,4 +1,5 @@
 <?php
+
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DocumentationController;
@@ -11,7 +12,7 @@ use Illuminate\Support\Facades\Auth;
 Route::get('/', function () {
     if (Auth::check()) {
         // If logged in, redirect to default documentation page
-        return redirect()->route('docs.index'); // Changed to just 'docs'
+        return redirect()->route('docs.index');
     }
     // If not logged in, redirect to login page
     return redirect()->route('login');
@@ -27,7 +28,7 @@ Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->midd
 // Grup rute yang memerlukan autentikasi untuk mengakses dokumentasi dan fungsionalitas terkait
 Route::middleware('auth')->group(function () {
     // Rute Dokumentasi - sekarang hanya bisa diakses setelah login
-    Route::get('/docs', [DocumentationController::class, 'index'])->name('docs.index'); 
+    Route::get('/docs', [DocumentationController::class, 'index'])->name('docs.index');
     Route::get('/docs/{category}/{page?}', [DocumentationController::class, 'show'])->name('docs');
 
     // Rute API dan fungsionalitas terkait dokumentasi yang memerlukan autentikasi
@@ -35,9 +36,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/upload', [CKEditorController::class, 'upload'])->name('ckeditor.upload');
     Route::post('/docs/save/{menu_id}', [DocumentationController::class, 'saveContent'])->name('docs.save');
     Route::delete('/docs/delete/{menu_id}', [DocumentationController::class, 'deleteContent'])->name('docs.delete');
+
+    // Rute Kategori (CRUD) - dipindahkan ke dalam grup middleware 'auth'
+    Route::post('/kategori', [NavmenuController::class, 'storeCategory'])->name('kategori.store'); // Changed route path for store
     Route::put('/kategori/{categorySlug}', [NavmenuController::class, 'updateCategory'])->name('kategori.update');
     Route::delete('/kategori/{categorySlug}', [NavmenuController::class, 'destroyCategory'])->name('kategori.destroy');
-
 });
 
 
@@ -53,6 +56,3 @@ Route::middleware('auth')->prefix('api')->group(function () {
         Route::put('/{navMenu}/content', [NavmenuController::class, 'updateMenuContent'])->name('api.navigasi.content.update');
     });
 });
-
-// Route untuk menyimpan kategori baru (via AJAX POST)
-Route::post('/kategori/store', [NavmenuController::class, 'storeCategory'])->name('kategori.store');
