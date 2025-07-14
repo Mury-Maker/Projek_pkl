@@ -110,16 +110,7 @@ class DocumentationController extends Controller
         $menuId = $selectedNavItem->menu_id;
         $menusWithDocs = NavMenu::with('docsContent')->find($menuId);
 
-        // --- PENTING: Hapus SEMUA LOGIKA PEMBUATAN FILE BLADE DI SINI ---
-        // Anda tidak lagi membutuhkan:
-        // $pageSlugForFile = Str::slug($selectedNavItem->menu_nama);
-        // $viewPath = "docs.pages.{$pageSlugForFile}";
-        // $filePath = resource_path("views/docs/pages/{$pageSlugForFile}.blade.php");
-        // File::ensureDirectoryExists(resource_path("views/docs/pages"));
-        // if (!File::exists($filePath)) {
-        //     File::put(...);
-        // }
-        // --- AKHIR PENGHAPUSAN ---
+
         return view('docs.index', [
             'title'             => ucfirst($selectedNavItem->menu_nama) . ' - Dokumentasi ' . Str::headline($category),
             'navigation'        => $navigation,

@@ -35,6 +35,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/upload', [CKEditorController::class, 'upload'])->name('ckeditor.upload');
     Route::post('/docs/save/{menu_id}', [DocumentationController::class, 'saveContent'])->name('docs.save');
     Route::delete('/docs/delete/{menu_id}', [DocumentationController::class, 'deleteContent'])->name('docs.delete');
+    Route::put('/kategori/{categorySlug}', [NavmenuController::class, 'updateCategory'])->name('kategori.update');
+    Route::delete('/kategori/{categorySlug}', [NavmenuController::class, 'destroyCategory'])->name('kategori.destroy');
+
 });
 
 

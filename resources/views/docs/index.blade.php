@@ -431,15 +431,37 @@
                             <div id="category-dropdown-menu" class="header-dropdown-menu">
                                 @foreach ($categories as $cats)
                                     @php
-                                        $slug = Str::slug($cats); // Slug untuk URL dan data attribute
+                                        $slug = Str::slug($cats); // Slug for URL and data attribute
                                         $isActive = $currentCategory === $slug;
                                     @endphp
-                                    <a href="{{ route('docs', ['category' => $slug]) }}"
-                                    class="px-3 py-2 text-sm font-medium {{ $isActive ? 'bg-gray-100 text-gray-800' : 'text-gray-700 hover:bg-gray-50' }}"
-                                    data-category-key="{{ $slug }}"
-                                    data-category-name="{{ $cats }}">
-                                     {!! ucwords(str_replace('-',' ',$cats)) !!}
-                                    </a>
+                                    <div class="flex items-center justify-between group">
+                                        <a href="{{ route('docs', ['category' => $slug]) }}"
+                                            class="px-3 py-2 text-sm font-medium flex-grow {{ $isActive ? 'bg-gray-100 text-gray-800' : 'text-gray-700 hover:bg-gray-50' }}"
+                                            data-category-key="{{ $slug }}"
+                                            data-category-name="{{ $cats }}">
+                                           {!! ucwords(str_replace('-',' ',$cats)) !!}
+                                        </a>
+                                        @auth
+                                            @if(auth()->user()->role === 'admin')
+                                                <div class="flex items-center space-x-0.5 opacity-0 group-hover:opacity-100 transition-opacity pr-2">
+                                                    <button
+                                                        onclick="openEditCategoryModal('{{ $slug }}', '{{ $cats }}')"
+                                                        class="text-blue-500 hover:text-blue-700 p-1"
+                                                        title="Edit Kategori {{ $cats }}"
+                                                        aria-label="Edit Kategori">
+                                                        <i class="fa-solid fa-pencil"></i>
+                                                    </button>
+                                                    <button
+                                                        onclick="openDeleteCategoryConfirmModal('{{ $slug }}', '{{ $cats }}')"
+                                                        class="text-red-500 hover:text-red-700 p-1"
+                                                        title="Hapus Kategori {{ $cats }}"
+                                                        aria-label="Hapus Kategori">
+                                                        <i class="fa-solid fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            @endif
+                                        @endauth
+                                    </div>
                                 @endforeach
                                 @auth
                                     @if(auth()->user()->role === 'admin')
@@ -729,774 +751,805 @@
             }
         }
 
-        const categoryModal = document.getElementById('categoryModal');
-        const categoryForm = document.getElementById('categoryForm');
-        const categoryModalTitle = document.getElementById('categoryModalTitle');
 
-        function openCategoryModal(mode = 'create', defaultName = '') {
-            if (!categoryForm || !categoryModalTitle) {
-                alert('Form kategori tidak ditemukan!');
-                return;
-            }
-
-            categoryForm.reset();
-            document.getElementById('form_category_method').value = mode === 'edit' ? 'PUT' : 'POST';
-            document.getElementById('form_category_nama').value = defaultName;
-
-            categoryModalTitle.textContent = mode === 'edit' ? 'Edit Kategori' : 'Tambah Kategori';
-            categoryModal.classList.remove('hidden');
-        }
-
-        function closeCategoryModal() {
-            categoryModal.classList.add('hidden');
-        }
-
-        categoryForm.addEventListener('submit', function (e) {
-            e.preventDefault();
-
-            const categoryName = document.getElementById('form_category_nama').value;
-            const method = document.getElementById('form_category_method').value;
-
-            fetch('/kategori/store', {
-                method: method === 'PUT' ? 'PUT' : 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
-                },
-                body: JSON.stringify({ category: categoryName }),
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Kategori berhasil ditambahkan.');
-                    closeCategoryModal();
-                    location.reload(); // atau perbarui dropdown kategori
-                } else {
-                    alert('Gagal menambahkan kategori.');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Terjadi kesalahan.');
-            });
-        });
 
 
 
     </script>
     
     <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        // =================================
-        // Verifikasi Logout
-        // =================================
-        const logoutForm = document.getElementById('logout-form');
-        const logoutBtn = document.getElementById('logout-btn');
-
-        logoutBtn.addEventListener('click', function (e) {
-            e.preventDefault(); // selalu hentikan submit dulu
-
-            Swal.fire({
-                title: 'Yakin ingin logout?',
-                text: "Sesi Anda akan berakhir.",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Ya, Logout',
-                cancelButtonText: 'Batal'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    logoutForm.submit(); // hanya submit jika dikonfirmasi
+        document.addEventListener('DOMContentLoaded', () => {
+            // =================================
+            // Global Utility Variables
+            // =================================
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            const modalTitleElement = document.getElementById('modal-title');
+            const formCategoryElement = document.getElementById('form_category');
+            // Ensure currentCategory is defined from PHP in the Blade template
+            const currentCategory = formCategoryElement ? formCategoryElement.value : 'epesantren';
+    
+            // Elements for modals and notifications
+            const notificationContainer = document.getElementById('notification-container');
+            const centralSuccessPopup = document.getElementById('central-success-popup');
+            const centralPopupMessage = document.getElementById('central-popup-message');
+            const deleteConfirmModal = document.getElementById('delete-confirm-modal');
+            const deleteConfirmMessage = document.getElementById('delete-confirm-message');
+            const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+            const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+            
+            // Menu & Category Modals elements (for admin features)
+            const menuModal = document.getElementById('menu-modal');
+            const menuForm = document.getElementById('menu-form');
+            const categoryModal = document.getElementById('categoryModal');
+            const categoryForm = document.getElementById('categoryForm');
+            const categoryModalTitle = document.getElementById('categoryModalTitle');
+            const formCategoryNama = document.getElementById('form_category_nama');
+            const formCategoryMethod = document.getElementById('form_category_method');
+    
+            let menuToDelete = null; // Used for both menu and category deletion
+    
+            // =================================
+            // Notification & Popup Functions
+            // =================================
+    
+            const showNotification = (message, type = 'success', duration = 3000) => {
+                if (!notificationContainer) {
+                    console.error("Notification container not found!");
+                    return null;
                 }
-            });
-        });
-
-        // =================================
-        // VARIABEL & FUNGSI UTILITAS (GLOBAL)
-        // =================================
-        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-        const modalTitleElement = document.getElementById('modal-title');
-        const formCategoryElement = document.getElementById('form_category');
-        const currentCategory = formCategoryElement ? formCategoryElement.value : 'epesantren';
-
-        // === Notifikasi Toast Kecil (untuk loading/error) ===
-        const showNotification = (message, type = 'success', duration = 3000) => {
-            const container = document.getElementById('notification-container');
-            const notifId = 'notif-' + Date.now();
-            const notifDiv = document.createElement('div');
-            notifDiv.id = notifId;
-            notifDiv.className = `notification-message ${type}`;
-
-            let iconClass = '';
-            let timeoutDuration = duration;
-            let delayBeforeShow = 0;
-
-            if (type === 'success') {
-                iconClass = 'fa-solid fa-check-circle text-green-700';
-            } else if (type === 'error') {
-                iconClass = 'fa-solid fa-times-circle text-red-700';
-            } else if (type === 'loading') {
-                iconClass = 'fa-solid fa-spinner fa-spin text-blue-700';
-                timeoutDuration = 0; // Loading notification won't auto-hide
-                delayBeforeShow = 500; // Add 0.5 sec delay for loading notification
-            }
-
-            notifDiv.innerHTML = `<i class="notification-icon ${iconClass}"></i> ${message}`;
-            
-            const showTimeoutId = setTimeout(() => {
-                container.appendChild(notifDiv);
-                setTimeout(() => notifDiv.classList.add('show'), 10);
-            }, delayBeforeShow);
-
-            if (timeoutDuration > 0) {
-                setTimeout(() => {
-                    notifDiv.classList.remove('show');
-                    setTimeout(() => notifDiv.remove(), 500);
-                }, timeoutDuration + delayBeforeShow);
-            }
-
-            return { notifId: notifId, showTimeoutId: showTimeoutId, element: notifDiv };
-        };
-
-        const hideNotification = (notifInfo) => {
-            let notifElement;
-            let showTimeoutId;
-
-            if (typeof notifInfo === 'string') {
-                notifElement = document.getElementById(notifInfo);
-            } else if (typeof notifInfo === 'object' && notifInfo !== null) {
-                notifElement = notifInfo.element;
-                showTimeoutId = notifInfo.showTimeoutId;
-            }
-
-            if (showTimeoutId) {
-                clearTimeout(showTimeoutId);
-            }
-            
-            if (notifElement && notifElement.parentNode) {
-                notifElement.classList.remove('show');
-                setTimeout(() => notifElement.remove(), 500);
-            }
-        };
-
-        // === Fungsi Fetch API ===
-        const fetchAPI = async (url, options = {}) => {
-            const defaultHeaders = {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
-                'Accept': 'application/json',
+                const notifId = 'notif-' + Date.now();
+                const notifDiv = document.createElement('div');
+                notifDiv.id = notifId;
+                notifDiv.className = `notification-message ${type}`;
+    
+                let iconClass = '';
+                let timeoutDuration = duration;
+                let delayBeforeShow = 0;
+    
+                if (type === 'success') {
+                    iconClass = 'fa-solid fa-check-circle text-green-700';
+                } else if (type === 'error') {
+                    iconClass = 'fa-solid fa-times-circle text-red-700';
+                } else if (type === 'loading') {
+                    iconClass = 'fa-solid fa-spinner fa-spin text-blue-700';
+                    timeoutDuration = 0; // Loading notification won't auto-hide
+                    delayBeforeShow = 500; // Add 0.5 sec delay for loading notification
+                }
+    
+                notifDiv.innerHTML = `<i class="notification-icon ${iconClass}"></i> ${message}`;
+                
+                const showTimeoutId = setTimeout(() => {
+                    notificationContainer.appendChild(notifDiv);
+                    setTimeout(() => notifDiv.classList.add('show'), 10);
+                }, delayBeforeShow);
+    
+                if (timeoutDuration > 0) {
+                    setTimeout(() => {
+                        notifDiv.classList.remove('show');
+                        setTimeout(() => notifDiv.remove(), 500);
+                    }, timeoutDuration + delayBeforeShow);
+                }
+    
+                return { notifId: notifId, showTimeoutId: showTimeoutId, element: notifDiv };
             };
-            options.headers = { ...defaultHeaders, ...options.headers };
-
-            try {
-                const response = await fetch(url, options);
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || `Kesalahan HTTP! status: ${response.status}`);
+    
+            const hideNotification = (notifInfo) => {
+                let notifElement;
+                let showTimeoutId;
+    
+                if (typeof notifInfo === 'string') {
+                    notifElement = document.getElementById(notifInfo);
+                } else if (typeof notifInfo === 'object' && notifInfo !== null) {
+                    notifElement = notifInfo.element;
+                    showTimeoutId = notifInfo.showTimeoutId;
                 }
-                return await response.json();
-            } catch (error) {
-                console.error('Kesalahan Fetch API:', error);
-                throw error;
+    
+                if (showTimeoutId) {
+                    clearTimeout(showTimeoutId);
+                }
+                
+                if (notifElement && notifElement.parentNode) {
+                    notifElement.classList.remove('show');
+                    setTimeout(() => notifElement.remove(), 500);
+                }
+            };
+    
+            const showCentralSuccessPopup = (message) => {
+                if (centralPopupMessage) {
+                    centralPopupMessage.textContent = message;
+                }
+                if (centralSuccessPopup) {
+                    centralSuccessPopup.classList.add('show');
+                    setTimeout(() => {
+                        centralSuccessPopup.classList.remove('show');
+                    }, 1000);
+                }
+            };
+    
+            // =================================
+            // Fetch API Utility Function
+            // =================================
+            const fetchAPI = async (url, options = {}) => {
+                const defaultHeaders = {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json',
+                };
+                options.headers = { ...defaultHeaders, ...options.headers };
+    
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+                    }
+                    return await response.json();
+                } catch (error) {
+                    console.error('Fetch API Error:', error);
+                    throw error;
+                }
+            };
+    
+            // =================================
+            // Search Overlay/Modal Logic
+            // =================================
+            const openSearchModalBtnHeader = document.getElementById('open-search-modal-btn-header');
+            const searchOverlay = document.getElementById('search-overlay');
+            const searchOverlayInput = document.getElementById('search-overlay-input');
+            const searchResultsList = document.getElementById('search-results-list');
+            const clearSearchInputBtn = document.getElementById('clear-search-input-btn');
+            const closeSearchOverlayBtn = document.getElementById('close-search-overlay-btn');
+    
+            const openSearchModal = () => {
+                searchOverlay.classList.add('open');
+                searchOverlayInput.focus();
+                searchResultsList.innerHTML = '<p class="text-center text-gray-500 p-8">Mulai ketik untuk mencari...</p>';
+                clearSearchInputBtn.classList.add('hidden');
+                searchOverlayInput.value = '';
+            };
+    
+            const closeSearchModalSearchOverlay = () => {
+                searchOverlay.classList.remove('open');
+                searchOverlayInput.value = '';
+                clearSearchInputBtn.classList.add('hidden'); // Sembunyikan tombol 'x' saat modal ditutup
+                searchResultsList.innerHTML = '<p class="text-center text-gray-500 p-8">Mulai ketik untuk mencari...</p>'; // Reset hasil
+            }; 
+
+            if (openSearchModalBtnHeader) {
+                openSearchModalBtnHeader.addEventListener('click', openSearchModal);
             }
-        };
+    
+            if (searchOverlay) {
+                searchOverlay.addEventListener('click', (e) => {
+                    if (e.target === searchOverlay || e.target.closest('#close-search-overlay-btn')) {
+                        closeSearchModalSearchOverlay();
+                    }
+                });
+            }
+            if (closeSearchOverlayBtn) {
+                closeSearchOverlayBtn.addEventListener('click', closeSearchModalSearchOverlay);
+            }
 
-        // =================================
-        // LOGIKA PENCARIAN (untuk semua user)
-        // =================================
-        const openSearchModalBtnHeader = document.getElementById('open-search-modal-btn-header');
-        const searchOverlay = document.getElementById('search-overlay');
-        const searchOverlayInput = document.getElementById('search-overlay-input');
-        const searchResultsList = document.getElementById('search-results-list');
-        const clearSearchInputBtn = document.getElementById('clear-search-input-btn');
-        const closeSearchOverlayBtn = document.getElementById('close-search-overlay-btn');
-
-        const openSearchModal = () => {
-            searchOverlay.classList.add('open');
-            searchOverlayInput.focus();
-            searchResultsList.innerHTML = '<p class="text-center text-gray-500 p-8">Mulai ketik untuk mencari...</p>';
-            clearSearchInputBtn.classList.add('hidden');
-        };
-
-        const closeSearchModalSearchOverlay = () => {
-            searchOverlay.classList.remove('open');
-            searchOverlayInput.value = '';
-        };
-
-        if (openSearchModalBtnHeader) {
-            openSearchModalBtnHeader.addEventListener('click', openSearchModal);
-        }
-
-        if (searchOverlay) {
-            searchOverlay.addEventListener('click', (e) => {
-                if (e.target === searchOverlay || e.target.closest('#close-search-overlay-btn')) {
+            // Tambahkan event listener untuk tombol clear
+            if (clearSearchInputBtn) {
+                clearSearchInputBtn.addEventListener('click', () => {
+                    searchOverlayInput.value = ''; // Kosongkan input
+                    clearSearchInputBtn.classList.add('hidden'); // Sembunyikan tombol 'x'
+                    searchResultsList.innerHTML = '<p class="text-center text-gray-500 p-8">Mulai ketik untuk mencari...</p>'; // Reset hasil
+                    searchOverlayInput.focus(); // Kembalikan fokus ke input
+                });
+            }
+    
+            document.addEventListener('keydown', (e) => {
+                if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                    e.preventDefault();
+                    openSearchModal();
+                }
+                if (e.key === 'Escape' && searchOverlay.classList.contains('open')) {
                     closeSearchModalSearchOverlay();
                 }
             });
-        }
-        if (closeSearchOverlayBtn) {
-            closeSearchOverlayBtn.addEventListener('click', closeSearchModalSearchOverlay);
-        }
-
-        document.addEventListener('keydown', (e) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-                e.preventDefault();
-                openSearchModal();
-            }
-            if (e.key === 'Escape' && searchOverlay.classList.contains('open')) {
-                closeSearchModalSearchOverlay();
-            }
-        });
-
-        let searchTimeout;
-        if (searchOverlayInput) {
-            searchOverlayInput.addEventListener('input', () => {
-                clearTimeout(searchTimeout);
-                const query = searchOverlayInput.value.trim();
-                
-                if (query.length > 0) {
-                    clearSearchInputBtn.classList.remove('hidden');
-                } else {
-                    clearSearchInputBtn.classList.add('hidden');
-                }
-
-                if (query.length < 2) {
-                    searchResultsList.innerHTML = '<p class="text-center text-gray-500 p-8">Masukkan minimal 2 karakter untuk mencari.</p>';
-                    return;
-                }
-
-                searchResultsList.innerHTML = '<p class="text-center text-gray-500 p-8">Mencari...</p>';
-
-                searchTimeout = setTimeout(async () => {
-                    try {
-                        const data = await fetchAPI(`/api/search?query=${query}`); 
-                        searchResultsList.innerHTML = '';
-                        
-                        if (data.results && data.results.length > 0) {
-                            const groupedResultsByMenuName = data.results.reduce((acc, result) => {
-                                if (!acc[result.name]) {
-                                    acc[result.name] = [];
-                                }
-                                acc[result.name].push(result);
-                                return acc;
-                            }, {});
-
-                            for (const menuName in groupedResultsByMenuName) {
-                                const menuGroupHeader = document.createElement('div');
-                                menuGroupHeader.className = 'search-result-category';
-                                menuGroupHeader.textContent = menuName;
-                                searchResultsList.appendChild(menuGroupHeader);
-
-                                groupedResultsByMenuName[menuName].forEach(result => {
-                                    const itemLink = document.createElement('a');
-                                    itemLink.href = result.url;
-                                    itemLink.className = 'search-result-item px-6 py-3 block hover:bg-gray-100 rounded-md';
-                                    itemLink.innerHTML = `
-                                        <div class="search-title">${result.name}</div>
-                                        <p class="search-category-info">${result.category_name}</p>
-                                        ${result.context && result.context !== 'Judul Menu' ? `<p class="search-context">${result.context}</p>` : ''}
-                                    `;
-                                    itemLink.addEventListener('click', closeSearchModalSearchOverlay);
-                                    searchResultsList.appendChild(itemLink);
-                                });
-                            }
-                        } else {
-                            searchResultsList.innerHTML = '<p class="text-center text-gray-500 p-8">Tidak ada hasil yang ditemukan.</p>';
-                        }
-
-                    } catch (error) {
-                        searchResultsList.innerHTML = '<p class="text-center text-red-500 p-8">Terjadi kesalahan saat mencari.</p>';
-                        console.error('Kesalahan API Pencarian:', error);
+    
+            let searchTimeout;
+            if (searchOverlayInput) {
+                searchOverlayInput.addEventListener('input', () => {
+                    clearTimeout(searchTimeout);
+                    const query = searchOverlayInput.value.trim();
+                    
+                    if (query.length > 0) {
+                        clearSearchInputBtn.classList.remove('hidden');
+                    } else {
+                        clearSearchInputBtn.classList.add('hidden');
                     }
-                }, 300);
-            });
-        }
-
-        // =================================
-        // LOGIKA DROPDOWN SIDEBAR (untuk semua user)
-        // =================================
-
-        const sidebar = document.getElementById('sidebar-navigation');
-        const currentPathname = window.location.pathname; // Dapatkan path URL saat ini
-        const urlParams = new URLSearchParams(window.location.search);
-        const selectedMenuIdFromUrl = urlParams.get('page'); // Asumsi 'page' param mengandung menu_id yang dipilih
-
-        if (sidebar) {
-            sidebar.addEventListener('click', (e) => {
-                const trigger = e.target.closest('.menu-arrow-icon');
-                const menuLink = e.target.closest('.menu-link'); // Tangkap klik pada link menu juga
-
-                // Handle dropdown toggle for parent menus
-                if (trigger) {
-                    e.preventDefault();
-
-                    const submenuId = trigger.dataset.toggle;
-                    const submenu = document.getElementById(submenuId);
-                    const icon = trigger.querySelector('i');
-
-                    if (submenu) {
-                        const isCurrentlyOpen = submenu.classList.contains('open');
-
-                        // Close other top-level submenus to avoid too many open at once
-                        // This part is good, keep it as is if you want only one top-level submenu open
-                        const allOpenSubmenus = sidebar.querySelectorAll('.submenu-container.open');
-                        allOpenSubmenus.forEach(openSubmenu => {
-                            // Only close if it's not the current submenu being toggled
-                            // and not a parent of the current submenu being toggled
-                            if (openSubmenu !== submenu && !submenu.contains(openSubmenu)) {
-                                // Check if openSubmenu is NOT an ancestor of the currently selected item
-                                let isAncestorOfSelectedItem = false;
-                                let tempParent = submenu;
-                                while (tempParent && tempParent !== sidebar) {
-                                    if (tempParent === openSubmenu) {
-                                        isAncestorOfSelectedItem = true;
-                                        break;
+    
+                    if (query.length < 2) {
+                        searchResultsList.innerHTML = '<p class="text-center text-gray-500 p-8">Masukkan minimal 2 karakter untuk mencari.</p>';
+                        return;
+                    }
+    
+                    searchResultsList.innerHTML = '<p class="text-center text-gray-500 p-8">Mencari...</p>';
+    
+                    searchTimeout = setTimeout(async () => {
+                        try {
+                            const data = await fetchAPI(`/api/search?query=${query}`);    
+                            searchResultsList.innerHTML = '';
+                            
+                            if (data.results && data.results.length > 0) {
+                                const groupedResultsByMenuName = data.results.reduce((acc, result) => {
+                                    if (!acc[result.name]) {
+                                        acc[result.name] = [];
                                     }
-                                    tempParent = tempParent.parentElement.closest('.submenu-container');
+                                    acc[result.name].push(result);
+                                    return acc;
+                                }, {});
+    
+                                for (const menuName in groupedResultsByMenuName) {
+                                    const menuGroupHeader = document.createElement('div');
+                                    menuGroupHeader.className = 'search-result-category';
+                                    menuGroupHeader.textContent = menuName;
+                                    searchResultsList.appendChild(menuGroupHeader);
+    
+                                    groupedResultsByMenuName[menuName].forEach(result => {
+                                        const itemLink = document.createElement('a');
+                                        itemLink.href = result.url;
+                                        itemLink.className = 'search-result-item px-6 py-3 block hover:bg-gray-100 rounded-md';
+                                        itemLink.innerHTML = `
+                                            <div class="search-title">${result.name}</div>
+                                            <p class="search-category-info">${result.category_name}</p>
+                                            ${result.context && result.context !== 'Judul Menu' ? `<p class="search-context">${result.context}</p>` : ''}
+                                        `;
+                                        itemLink.addEventListener('click', closeSearchModalSearchOverlay);
+                                        searchResultsList.appendChild(itemLink);
+                                    });
                                 }
-                                if (!isAncestorOfSelectedItem) {
-                                    openSubmenu.classList.remove('open');
-                                    const relatedTrigger = sidebar.querySelector(`[data-toggle="${openSubmenu.id}"]`);
-                                    if (relatedTrigger) {
-                                        relatedTrigger.setAttribute('aria-expanded', 'false');
-                                        relatedTrigger.querySelector('i')?.classList.remove('open');
+                            } else {
+                                searchResultsList.innerHTML = '<p class="text-center text-gray-500 p-8">Tidak ada hasil yang ditemukan.</p>';
+                            }
+    
+                        } catch (error) {
+                            searchResultsList.innerHTML = '<p class="text-center text-red-500 p-8">Terjadi kesalahan saat mencari.</p>';
+                            console.error('Search API Error:', error);
+                        }
+                    }, 300);
+                });
+            }
+    
+            // =================================
+            // Sidebar Dropdown Logic
+            // =================================
+            const sidebar = document.getElementById('sidebar-navigation');
+            
+            if (sidebar) {
+                sidebar.addEventListener('click', (e) => {
+                    const trigger = e.target.closest('.menu-arrow-icon');
+                    
+                    if (trigger) {
+                        e.preventDefault();
+    
+                        const submenuId = trigger.dataset.toggle;
+                        const submenu = document.getElementById(submenuId);
+                        const icon = trigger.querySelector('i');
+    
+                        if (submenu) {
+                            const isCurrentlyOpen = submenu.classList.contains('open');
+    
+                            const allOpenSubmenus = sidebar.querySelectorAll('.submenu-container.open');
+                            allOpenSubmenus.forEach(openSubmenu => {
+                                if (openSubmenu !== submenu && !submenu.contains(openSubmenu)) {
+                                    let isAncestorOfCurrent = false;
+                                    let tempParent = submenu;
+                                    while (tempParent && tempParent !== sidebar) {
+                                        if (tempParent === openSubmenu) {
+                                            isAncestorOfCurrent = true;
+                                            break;
+                                        }
+                                        tempParent = tempParent.parentElement.closest('.submenu-container');
+                                    }
+                                    if (!isAncestorOfCurrent) {
+                                        openSubmenu.classList.remove('open');
+                                        const relatedTrigger = sidebar.querySelector(`[data-toggle="${openSubmenu.id}"]`);
+                                        if (relatedTrigger) {
+                                            relatedTrigger.setAttribute('aria-expanded', 'false');
+                                            relatedTrigger.querySelector('i')?.classList.remove('open');
+                                        }
                                     }
                                 }
+                            });
+    
+                            submenu.classList.toggle('open');
+                            trigger.setAttribute('aria-expanded', isCurrentlyOpen ? 'false' : 'true');
+                            if (icon) {
+                                icon.classList.toggle('open', !isCurrentlyOpen);
                             }
-                        });
-
-                        submenu.classList.toggle('open');
-                        trigger.setAttribute('aria-expanded', isCurrentlyOpen ? 'false' : 'true');
-                        if (icon) {
-                            icon.classList.toggle('open', !isCurrentlyOpen);
                         }
                     }
-                } else if (menuLink) {
-                    // If a menu link is clicked, ensure its parent is open before navigation
-                    // This is less about keeping it open after reload, and more about visual state before navigation
-                    // However, the `openActiveMenuParents` will handle persistence after reload.
-                    // No `e.preventDefault()` here if you want the link to navigate normally.
-                }
-            });
-        }
-
-        const initSidebarDropdown = () => {
-            const sidebarElement = document.getElementById('sidebar-navigation');
-            if (!sidebarElement) return;
-
-            const openActiveMenuParents = () => {
-                // Find the currently active menu item based on the selectedNavItemId from Blade
-                // We assume $selectedNavItem->menu_id is passed from Laravel to JS via Blade.
-                // Example: const selectedMenuItemElement = sidebarElement.querySelector(`[data-menu-id="${selectedNavItemId}"]`);
-                // You already have a .bg-blue-100 class for the active item.
+                });
+            }
+    
+            const initSidebarDropdown = () => {
+                const sidebarElement = document.getElementById('sidebar-navigation');
+                if (!sidebarElement) return;
+    
                 const activeItemElement = sidebarElement.querySelector('.bg-blue-100');
-
+    
                 if (activeItemElement) {
-                    // Find all parent submenu containers for the active item
                     let currentElement = activeItemElement;
                     while (currentElement && currentElement !== sidebarElement) {
                         if (currentElement.classList.contains('submenu-container')) {
                             currentElement.classList.add('open');
-                            // Also update the arrow icon of its trigger
                             const triggerButton = sidebarElement.querySelector(`[data-toggle="${currentElement.id}"]`);
                             if (triggerButton) {
                                 const icon = triggerButton.querySelector('i');
                                 if (icon) {
-                                    icon.classList.add('open'); // Rotate the arrow
+                                    icon.classList.add('open');
                                     triggerButton.setAttribute('aria-expanded', 'true');
                                 }
                             }
                         }
-                        currentElement = currentElement.parentElement; // Move up the DOM tree
+                        currentElement = currentElement.parentElement.closest('.my-0\\.5, .submenu-container');
                     }
                 }
             };
-
-            openActiveMenuParents();
-        };
-
-        initSidebarDropdown();
-
-        // =================================
-        // LOGIKA DROPDOWN KATEGORI HEADER
-        // =================================
-        const button = document.getElementById('category-dropdown-btn');
-        const menu = document.getElementById('category-dropdown-menu');
-
-        button.addEventListener('click', () => {
-            const isVisible = menu.classList.contains('opacity-100');
-
-            if (isVisible) {
-                menu.classList.remove('opacity-100', 'visible');
-                menu.classList.add('opacity-0', 'invisible');
-            } else {
-                menu.classList.remove('opacity-0', 'invisible');
-                menu.classList.add('opacity-100', 'visible');
-            }
-        });
-
-        // Optional: close menu if clicking outside
-        document.addEventListener('click', function (e) {
-            if (!button.contains(e.target) && !menu.contains(e.target)) {
-                menu.classList.remove('opacity-100', 'visible');
-                menu.classList.add('opacity-0', 'invisible');
-            }
-        });
-        const categoryDropdownBtn = document.getElementById('category-dropdown-btn');
-        const categoryDropdownText = document.getElementById('category-button-text'); // Dapatkan elemen span
-        const categoryDropdownMenu = document.getElementById('category-dropdown-menu');
-
-        // Dapatkan nama kategori saat ini dari Laravel ($currentCategory)
-        // Ini akan mengambil nilai dari PHP saat halaman dimuat
-        const currentCategoryFromBlade = "{{ $currentCategory ?? 'default' }}"; 
-
-        // Fungsi untuk memperbarui teks tombol dropdown
-        const updateCategoryButtonText = (categoryKey) => {
-            let categoryDisplayName = 'Kategori'; // Default jika tidak cocok
-            if (categoryKey === 'epesantren') {
-                categoryDisplayName = 'Epesantren';
-            } else if (categoryKey === 'adminsekolah') {
-                categoryDisplayName = 'Admin Sekolah';
-            }
-            // Tambahkan kondisi lain jika ada kategori baru di masa mendatang
-            // else if (categoryKey === 'nama_kategori_baru') {
-            //     categoryDisplayName = 'Nama Kategori Baru';
-            // }
-
-            if (categoryDropdownText) {
-                categoryDropdownText.textContent = categoryDisplayName;
-            }
-        };
-
-        // Panggil fungsi ini saat DOM dimuat untuk mengatur teks awal
-        // Ini adalah bagian penting yang memastikan teks tombol benar setelah reload halaman
-        updateCategoryButtonText(currentCategoryFromBlade);
-
-
-        if (categoryDropdownBtn && categoryDropdownMenu) {
-            categoryDropdownBtn.addEventListener('click', (e) => {
-                e.stopPropagation(); // Mencegah event click menyebar ke document dan langsung menutup dropdown
-                categoryDropdownMenu.classList.toggle('open');
-                const chevronIcon = categoryDropdownBtn.querySelector('.fa-chevron-down, .fa-chevron-up');
-                if (categoryDropdownMenu.classList.contains('open')) {
-                    chevronIcon.classList.remove('fa-chevron-down');
-                    chevronIcon.classList.add('fa-chevron-up');
+    
+            initSidebarDropdown();
+    
+            // =================================
+            // Header Category Dropdown Logic
+            // =================================
+            const categoryDropdownBtn = document.getElementById('category-dropdown-btn');
+            const categoryDropdownText = document.getElementById('category-button-text');
+            const categoryDropdownMenu = document.getElementById('category-dropdown-menu');
+    
+            const currentCategoryFromBlade = "{{ $currentCategory ?? 'default' }}";
+    
+            const updateCategoryButtonText = (categoryKey) => {
+                const selectedLink = document.querySelector(`[data-category-key="${categoryKey}"]`);
+                if (selectedLink) {
+                    categoryDropdownText.textContent = selectedLink.dataset.categoryName;
                 } else {
-                    chevronIcon.classList.remove('fa-chevron-up');
-                    chevronIcon.classList.add('fa-chevron-down');
+                    categoryDropdownText.textContent = categoryKey.replace(/-/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
                 }
-            });
-
-            // Close the dropdown if the user clicks outside of it
-            document.addEventListener('click', (event) => {
-                if (!categoryDropdownBtn.contains(event.target) && !categoryDropdownMenu.contains(event.target)) {
-                    categoryDropdownMenu.classList.remove('open');
-                    const chevronIcon = categoryDropdownBtn.querySelector('.fa-chevron-up');
-                    if (chevronIcon) { // Pastikan ikon ada sebelum mencoba menghapus kelas
-                        chevronIcon.classList.remove('fa-chevron-up');
-                        chevronIcon.classList.add('fa-chevron-down');
+            };
+    
+            updateCategoryButtonText(currentCategoryFromBlade);
+    
+            if (categoryDropdownBtn && categoryDropdownMenu) {
+                categoryDropdownBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    categoryDropdownMenu.classList.toggle('open');
+                    const chevronIcon = categoryDropdownBtn.querySelector('.fa-chevron-down, .fa-chevron-up');
+                    if (categoryDropdownMenu.classList.contains('open')) {
+                        if (chevronIcon) {
+                            chevronIcon.classList.remove('fa-chevron-down');
+                            chevronIcon.classList.add('fa-chevron-up');
+                        }
+                    } else {
+                        if (chevronIcon) {
+                            chevronIcon.classList.remove('fa-chevron-up');
+                            chevronIcon.classList.add('fa-chevron-down');
+                        }
                     }
-                }
-            });
-
-            // Menangani klik pada item dropdown
-            categoryDropdownMenu.querySelectorAll('a').forEach(item => {
-                item.addEventListener('click', (e) => {
-                    // TIDAK perlu e.preventDefault() karena kita ingin link navigasi berjalan
-                    // Ambil category key dari atribut href
-                    const href = item.getAttribute('href'); // Gunakan 'item' bukan 'e.target' untuk memastikan ini adalah <a>
-                    const url = new URL(href);
-                    const newCategoryKey = url.searchParams.get('category'); // Dapatkan nilai 'category' dari URL
-
-                    if (newCategoryKey) {
-                        updateCategoryButtonText(newCategoryKey); // Update teks tombol berdasarkan key baru
-                    }
-
-                    // Tutup dropdown setelah item diklik
-                    categoryDropdownMenu.classList.remove('open');
-                    const chevronIcon = categoryDropdownBtn.querySelector('.fa-chevron-up');
-                    if (chevronIcon) {
-                        chevronIcon.classList.remove('fa-chevron-up');
-                        chevronIcon.classList.add('fa-chevron-down');
-                    }
-                    // Navigasi ke URL yang dipilih akan terjadi secara otomatis karena ini adalah tag <a>
                 });
-            });
-        }
-
-        // =================================
-        // NEW CENTRAL SUCCESS POPUP LOGIC
-        // =================================
-        const centralSuccessPopup = document.getElementById('central-success-popup');
-        const centralPopupMessage = document.getElementById('central-popup-message');
-
-        const showCentralSuccessPopup = (message) => {
-            if (centralPopupMessage) {
-                centralPopupMessage.textContent = message;
+    
+                document.addEventListener('click', (event) => {
+                    if (!categoryDropdownBtn.contains(event.target) && !categoryDropdownMenu.contains(event.target)) {
+                        categoryDropdownMenu.classList.remove('open');
+                        const chevronIcon = categoryDropdownBtn.querySelector('.fa-chevron-up');
+                        if (chevronIcon) {
+                            chevronIcon.classList.remove('fa-chevron-up');
+                            chevronIcon.classList.add('fa-chevron-down');
+                        }
+                    }
+                });
+    
+                categoryDropdownMenu.querySelectorAll('a').forEach(item => {
+                    item.addEventListener('click', (e) => {
+                        const href = item.getAttribute('href');
+                        const url = new URL(href, window.location.origin);
+                        const newCategoryKey = url.pathname.split('/')[2];
+    
+                        if (newCategoryKey) {
+                            updateCategoryButtonText(newCategoryKey);
+                        }
+                        
+                        categoryDropdownMenu.classList.remove('open');
+                        const chevronIcon = categoryDropdownBtn.querySelector('.fa-chevron-up');
+                        if (chevronIcon) {
+                            chevronIcon.classList.remove('fa-chevron-up');
+                            chevronIcon.classList.add('fa-chevron-down');
+                        }
+                    });
+                });
             }
-            if (centralSuccessPopup) {
-                centralSuccessPopup.classList.add('show');
-                // Auto-hide after 1 second
-                setTimeout(() => {
-                    centralSuccessPopup.classList.remove('show');
-                }, 1000); // 1000 ms = 1 detik
-            }
-        };
+            
+            // =================================
+            // Admin Logic (Modals & CRUD)
+            // Only runs if user is admin
+            // =================================
+            @auth
+                @if(auth()->user()->role === 'admin')
 
-        // =================================
-        // LOGIKA ADMIN (MODAL & CRUD) - HANYA DIJALANKAN JIKA USER ADALAH ADMIN
-        // =================================
-        @auth
-            @if(auth()->user()->role === 'admin')
-                const menuModal = document.getElementById('menu-modal');
-                const menuForm = document.getElementById('menu-form');
-                const deleteConfirmModal = document.getElementById('delete-confirm-modal');
-                const deleteConfirmMessage = document.getElementById('delete-confirm-message');
-                const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
-                const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
-                const categoryModal = document.getElementById('categoryModal');
-                const categoryForm = document.getElementById('categoryForm');
-                const categoryModalTitle = document.getElementById('categoryModalTitle');
+                    // Category Modal functions
+                    window.openCategoryModal = (mode = 'create', defaultName = '') => {
+                        if (!categoryForm || !categoryModalTitle) {
+                            showNotification('Form kategori tidak ditemukan!', 'error');
+                            return;
+                        }
+                        categoryForm.reset();
+                        document.getElementById('form_category_method').value = mode === 'edit' ? 'PUT' : 'POST';
+                        document.getElementById('form_category_nama').value = defaultName; // Menggunakan ID input
+                        categoryModalTitle.textContent = mode === 'edit' ? 'Edit Kategori' : 'Tambah Kategori';
+                        categoryModal.classList.remove('hidden');
+                    };
 
-                let menuToDelete = null;
-
-                function openCategoryModal(mode = 'create', defaultName = '') {
-                    if (!categoryForm || !categoryModalTitle) {
-                        alert('Form kategori tidak ditemukan!');
-                        return;
+                    window.closeCategoryModal = () => {
+                        categoryModal.classList.add('hidden');
+                        currentCategorySlugForEditDelete = null;
                     }
 
-                    categoryForm.reset();
-                    document.getElementById('form_category_method').value = mode === 'edit' ? 'PUT' : 'POST';
-                    document.getElementById('form_category_nama').value = defaultName;
+                    let currentCategorySlugForEditDelete = null;
 
-                    categoryModalTitle.textContent = mode === 'edit' ? 'Edit Kategori' : 'Tambah Kategori';
-                    categoryModal.classList.remove('hidden');
-                }
+                    window.openEditCategoryModal = (categoryKey, categoryName) => {
+                        currentCategorySlugForEditDelete = categoryKey;
+                        window.openCategoryModal('edit', categoryName);
+                    };
 
-                function closeCategoryModal() {
-                categoryModal.classList.add('hidden');
-            }
-                
+                    window.openDeleteCategoryConfirmModal = (categoryKey, categoryName) => {
+                        menuToDelete = { id: categoryKey, name: categoryName, type: 'category' };
+                        if (deleteConfirmMessage) {
+                            deleteConfirmMessage.textContent = `Apakah Anda yakin ingin menghapus kategori "${categoryName}"? Tindakan ini tidak dapat dibatalkan dan akan menghapus semua menu dan konten di dalamnya.`;
+                        }
+                        if (deleteConfirmModal) {
+                            deleteConfirmModal.classList.add('show');
+                        }
+                    };
 
-                const openMenuModal = (mode, menuData = null, parentId = 0) => {
-                    if (!menuForm || !modalTitleElement) {
-                        showNotification('Elemen form menu tidak ditemukan.', 'error');
-                        console.error('Elemen form menu admin tidak ada di DOM.');
-                        return;
-                    }
-                    menuForm.reset();
-                    document.getElementById('form_menu_id').value = '';
-                    document.getElementById('form_method').value = mode === 'edit' ? 'PUT' : 'POST';
+                    // Menu Modal Functions (for add/edit menu)
+                    const openMenuModal = (mode, menuData = null, parentId = 0) => {
+                        if (!menuForm || !modalTitleElement) {
+                            showNotification('Elemen form menu tidak ditemukan.', 'error');
+                            console.error('Elemen form menu admin tidak ada di DOM.');
+                            return;
+                        }
+                        menuForm.reset();
+                        document.getElementById('form_menu_id').value = '';
+                        document.getElementById('form_method').value = mode === 'edit' ? 'PUT' : 'POST';
 
-                    const formMenuChildSelect = document.getElementById('form_menu_child');
-                    formMenuChildSelect.innerHTML = '<option value="0">Tidak Ada (Menu Utama)</option>';
+                        const formMenuChildSelect = document.getElementById('form_menu_child');
+                        formMenuChildSelect.innerHTML = '<option value="0">Tidak Ada (Menu Utama)</option>';
 
-                    const editingMenuId = mode === 'edit' && menuData ? menuData.menu_id : null;
-                    let parentApiUrl = `/api/navigasi/parents/${currentCategory}`;
-                    if (editingMenuId) {
-                        parentApiUrl += `?editing_menu_id=${editingMenuId}`;
-                    }
+                        const editingMenuId = mode === 'edit' && menuData ? menuData.menu_id : null;
+                        let parentApiUrl = `/api/navigasi/parents/${currentCategory}`;
+                        if (editingMenuId) {
+                            parentApiUrl += `?editing_menu_id=${editingMenuId}`;
+                        }
 
-                    fetchAPI(parentApiUrl)
-                        .then(parents => {
-                            parents.forEach(parent => {
-                                const option = document.createElement('option');
-                                option.value = parent.menu_id;
-                                option.textContent = parent.menu_nama;
-                                formMenuChildSelect.appendChild(option);
+                        fetchAPI(parentApiUrl)
+                            .then(parents => {
+                                parents.forEach(parent => {
+                                    const option = document.createElement('option');
+                                    option.value = parent.menu_id;
+                                    option.textContent = parent.menu_nama;
+                                    formMenuChildSelect.appendChild(option);
+                                });
+
+                                if (mode === 'create') {
+                                    modalTitleElement.textContent = 'Tambah Menu Baru';
+                                    formMenuChildSelect.value = parentId;
+                                    document.getElementById('form_menu_status').checked = true;
+                                } else if (mode === 'edit' && menuData) {
+                                    modalTitleElement.textContent = `Edit Menu: ${menuData.menu_nama}`;
+                                    document.getElementById('form_menu_id').value = menuData.menu_id;
+                                    document.getElementById('form_menu_nama').value = menuData.menu_nama;
+                                    document.getElementById('form_menu_icon').value = menuData.menu_icon;
+                                    formMenuChildSelect.value = menuData.menu_child;
+                                    document.getElementById('form_menu_order').value = menuData.menu_order;
+                                    document.getElementById('form_menu_status').checked = menuData.menu_status == 1;
+                                }
+                            })
+                            .catch(error => {
+                                showNotification('Gagal memuat daftar parent menu.', 'error');
+                                console.error('Error loading parent menus:', error);
                             });
 
-                            if (mode === 'create') {
-                                modalTitleElement.textContent = 'Tambah Menu Baru';
-                                formMenuChildSelect.value = parentId;
-                                document.getElementById('form_menu_status').checked = true;
-                            } else if (mode === 'edit' && menuData) {
-                                modalTitleElement.textContent = `Edit Menu: ${menuData.menu_nama}`;
-                                document.getElementById('form_menu_id').value = menuData.menu_id;
-                                document.getElementById('form_menu_nama').value = menuData.menu_nama;
-                                document.getElementById('form_menu_icon').value = menuData.menu_icon;
-                                formMenuChildSelect.value = menuData.menu_child;
-                                document.getElementById('form_menu_order').value = menuData.menu_order;
-                                document.getElementById('form_menu_status').checked = menuData.menu_status == 0;
-                            }
-                        })
-                        .catch(error => {
-                            showNotification('Gagal memuat daftar parent menu.', 'error');
-                            console.error('Kesalahan memuat menu parent:', error);
-                        });
+                        menuModal.classList.add('show');
+                    };
 
-                    menuModal.classList.add('show');
-                };
-                
-                const openDeleteConfirmModal = (menuId, menuNama) => {
-                    menuToDelete = { id: menuId, name: menuNama };
-                    if (deleteConfirmMessage) {
-                        deleteConfirmMessage.textContent = `Apakah Anda yakin ingin menghapus menu "${menuNama}"? Tindakan ini tidak dapat dibatalkan dan akan menghapus semua sub-menu terkait.`;
-                    }
-                    if (deleteConfirmModal) {
-                        deleteConfirmModal.classList.add('show');
-                    }
-                };
-
-                const closeDeleteConfirmModal = () => {
-                    if (deleteConfirmModal) {
-                        deleteConfirmModal.classList.remove('show');
-                    }
-                    menuToDelete = null;
-                };
-
-                const closeMenuModalAdmin = () => menuModal.classList.remove('show');
-
-                const refreshSidebar = async () => {
-                    const sidebarElement = document.getElementById('sidebar-navigation');
-                    if (!sidebarElement) {
-                        showNotification('Gagal memuat ulang sidebar: Elemen navigasi tidak ditemukan.', 'error');
-                        console.error('Elemen navigasi sidebar tidak ada.');
-                        return;
-                    }
-                    try {
-                        const data = await fetchAPI(`/api/navigasi/all/${currentCategory}`);
-                        sidebarElement.innerHTML = data.html;
-                        attachAdminEventListeners();
-                        initSidebarDropdown();
-                    } catch (error) {
-                        showNotification('Gagal memuat ulang sidebar.', 'error');
-                        console.error('Kesalahan memuat ulang sidebar:', error);
-                    }
-                };
-
-                const attachAdminEventListeners = () => {
-                    console.log('Menambahkan event listener admin...');
-
-                    const addParentMenuBtn = document.getElementById('add-parent-menu-btn');
-                    if (addParentMenuBtn) {
-                        addParentMenuBtn.addEventListener('click', () => openMenuModal('create', null, 0));
-                    }
-                    const cancelMenuFormBtn = document.getElementById('cancel-menu-form-btn');
-                    if (cancelMenuFormBtn) {
-                        cancelMenuFormBtn.addEventListener('click', closeMenuModalAdmin);
-                    }
-
-                    document.querySelectorAll('.edit-menu-btn').forEach(button => {
-                        button.addEventListener('click', async (e) => {
-                            e.stopPropagation();
-                            const menuId = e.currentTarget.dataset.menuId;
-                            try {
-                                const menuData = await fetchAPI(`/api/navigasi/${menuId}`);
-                                openMenuModal('edit', menuData);
-                            } catch (error) {
-                                showNotification('Gagal memuat data menu untuk diedit.', 'error');
-                                console.error('Kesalahan mengambil data menu untuk edit:', error);
-                            }
-                        });
-                    });
-
-                    document.querySelectorAll('.delete-menu-btn').forEach(button => {
-                        button.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            const menuId = e.currentTarget.dataset.menuId;
-                            const menuNama = e.currentTarget.dataset.menuNama;
-                            openDeleteConfirmModal(menuId, menuNama);
-                        });
-                    });
-
-                    document.querySelectorAll('.add-child-menu-btn').forEach(button => {
-                        button.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            const parentId = e.currentTarget.dataset.parentId;
-                            openMenuModal('create', null, parentId);
-                        });
-                    });
-                };
-                
-                if (menuForm) {
-                    menuForm.addEventListener('submit', async (e) => {
-                        e.preventDefault();
-                        
-                        const loadingNotif = showNotification('Menyimpan menu...', 'loading');
-
-                        const formData = new FormData(menuForm);
-                        const menuId = formData.get('menu_id');
-                        const method = document.getElementById('form_method').value;
-
-                        const dataToSend = {};
-                        formData.forEach((value, key) => {
-                            if (key === 'menu_status') {
-                                dataToSend[key] = value === '1' ? 1 : 0;
-                            } else {
-                                dataToSend[key] = value;
-                            }
-                        });
-
-                        const url = menuId ? `/api/navigasi/${menuId}` : '/api/navigasi';
-
-                        const options = {
-                            method: 'POST',
-                            body: JSON.stringify(dataToSend),
-                        };
-
-                        if (method === 'PUT') {
-                            options.headers = {
-                                ...options.headers,
-                                'X-HTTP-Method-Override': 'PUT'
-                            };
+                    const openDeleteConfirmModal = (menuId, menuNama) => {
+                        menuToDelete = { id: menuId, name: menuNama, type: 'menu' };
+                        if (deleteConfirmMessage) {
+                            deleteConfirmMessage.textContent = `Apakah Anda yakin ingin menghapus menu "${menuNama}"? Tindakan ini tidak dapat dibatalkan dan akan menghapus semua sub-menu terkait.`;
                         }
-                        
+                        if (deleteConfirmModal) {
+                            deleteConfirmModal.classList.add('show');
+                        }
+                    };
+
+                    const closeDeleteConfirmModal = () => {
+                        if (deleteConfirmModal) {
+                            deleteConfirmModal.classList.remove('show');
+                        }
+                        menuToDelete = null;
+                    };
+
+                    const closeMenuModalAdmin = () => menuModal.classList.remove('show');
+
+                    const refreshSidebar = async () => {
+                        const sidebarElement = document.getElementById('sidebar-navigation');
+                        if (!sidebarElement) {
+                            showNotification('Gagal memuat ulang sidebar: Elemen navigasi tidak ditemukan.', 'error');
+                            console.error('Sidebar navigation element not found.');
+                            return;
+                        }
                         try {
-                            const data = await fetchAPI(url, options);
-                            
-                            hideNotification(loadingNotif); 
-                            showCentralSuccessPopup(data.success); // Use the new central success popup
-                            
-                            closeMenuModalAdmin();
-                            refreshSidebar();
+                            const data = await fetchAPI(`/api/navigasi/all/${currentCategory}`);
+                            sidebarElement.innerHTML = data.html;
+                            attachAdminEventListeners(); // Re-attach listeners after content update
+                            initSidebarDropdown(); // Re-initialize dropdown state
                         } catch (error) {
-                            console.error('Kesalahan saat menyimpan menu:', error);
-                            hideNotification(loadingNotif); 
-                            
-                            if (error.message) {
-                                showNotification(`Gagal menyimpan: ${error.message}`, 'error');
-                            } else {
-                                showNotification('Terjadi kesalahan tidak dikenal saat menyimpan menu.', 'error');
-                            }
+                            showNotification('Gagal memuat ulang sidebar.', 'error');
+                            console.error('Error refreshing sidebar:', error);
                         }
-                    });
-                }
+                    };
 
-                if (cancelDeleteBtn) {
-                    cancelDeleteBtn.addEventListener('click', closeDeleteConfirmModal);
-                }
+                    const attachAdminEventListeners = () => {
+                        const addParentMenuBtn = document.getElementById('add-parent-menu-btn');
+                        if (addParentMenuBtn) {
+                            addParentMenuBtn.addEventListener('click', () => openMenuModal('create', null, 0));
+                        }
+                        const cancelMenuFormBtn = document.getElementById('cancel-menu-form-btn');
+                        if (cancelMenuFormBtn) {
+                            cancelMenuFormBtn.addEventListener('click', closeMenuModalAdmin);
+                        }
 
-                if (confirmDeleteBtn) {
-                    confirmDeleteBtn.addEventListener('click', async () => {
-                        if (menuToDelete) {
-                            const deleteLoadingNotif = showNotification('Menghapus menu...', 'loading');
-                            
+                        document.querySelectorAll('.edit-menu-btn').forEach(button => {
+                            button.addEventListener('click', async (e) => {
+                                e.stopPropagation();
+                                const menuId = e.currentTarget.dataset.menuId;
+                                try {
+                                    const menuData = await fetchAPI(`/api/navigasi/${menuId}`);
+                                    openMenuModal('edit', menuData);
+                                } catch (error) {
+                                    showNotification('Gagal memuat data menu untuk diedit.', 'error');
+                                    console.error('Error fetching menu data for edit:', error);
+                                }
+                            });
+                        });
+
+                        document.querySelectorAll('.delete-menu-btn').forEach(button => {
+                            button.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                const menuId = e.currentTarget.dataset.menuId;
+                                const menuNama = e.currentTarget.dataset.menuNama;
+                                openDeleteConfirmModal(menuId, menuNama);
+                            });
+                        });
+
+                        document.querySelectorAll('.add-child-menu-btn').forEach(button => {
+                            button.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                const parentId = e.currentTarget.dataset.parentId;
+                                openMenuModal('create', null, parentId);
+                            });
+                        });
+                    };
+
+                    if (menuForm) {
+                        menuForm.addEventListener('submit', async (e) => {
+                            e.preventDefault();
+
+                            const loadingNotif = showNotification('Menyimpan menu...', 'loading');
+
+                            const formData = new FormData(menuForm);
+                            const menuId = formData.get('menu_id'); // Mengambil nilai dari input name="menu_id"
+                            const method = document.getElementById('form_method').value;
+
+                            // Data yang akan dikirim, sesuaikan dengan nama kolom database
+                            const dataToSend = {
+                                menu_nama: formData.get('menu_nama'),
+                                menu_icon: formData.get('menu_icon'),
+                                menu_child: formData.get('menu_child'),
+                                menu_order: formData.get('menu_order'),
+                                menu_status: formData.get('menu_status') === 'on' ? 1 : 0, // Checkbox value 'on'
+                                category: formData.get('category')
+                            };
+
+                            const url = menuId ? `/api/navigasi/${menuId}` : '/api/navigasi';
+
+                            const options = {
+                                method: 'POST',
+                                body: JSON.stringify(dataToSend),
+                            };
+
+                            if (method === 'PUT') {
+                                options.headers = {
+                                    ...options.headers,
+                                    'X-HTTP-Method-Override': 'PUT'
+                                };
+                            }
+
                             try {
-                                const data = await fetchAPI(`/api/navigasi/${menuToDelete.id}`, { method: 'DELETE' });
-                                
-                                hideNotification(deleteLoadingNotif); 
-                                showCentralSuccessPopup(data.success); // Use the new central success popup
-                                
-                                closeDeleteConfirmModal();
+                                const data = await fetchAPI(url, options);
+
+                                hideNotification(loadingNotif);
+                                showCentralSuccessPopup('Berhasil!', data.success);
+
+                                closeMenuModalAdmin();
                                 refreshSidebar();
                             } catch (error) {
-                                hideNotification(deleteLoadingNotif); 
-                                showNotification(`Gagal menghapus: ${error.message || 'Terjadi kesalahan'}`, 'error');
-                                console.error('Kesalahan menghapus menu:', error);
-                                closeDeleteConfirmModal();
+                                console.error('Error saving menu:', error);
+                                hideNotification(loadingNotif);
+
+                                if (error.message) {
+                                    showNotification(`Gagal menyimpan: ${error.message}`, 'error');
+                                } else {
+                                    showNotification('Terjadi kesalahan tidak dikenal saat menyimpan menu.', 'error');
+                                }
                             }
-                        }
-                    });
+                        });
+                    }
+
+                    // Category Form Submission Handler
+                    if (categoryForm) {
+                        categoryForm.addEventListener('submit', async function (e) {
+                            e.preventDefault();
+
+                            const categoryName = document.getElementById('form_category_nama').value;
+                            const method = document.getElementById('form_category_method').value; // Ini akan 'PUT' atau 'POST'
+
+                            let url;
+                            let httpMethod; // Variabel untuk metode HTTP yang sebenarnya
+
+                            if (method === 'PUT') {
+                                if (!currentCategorySlugForEditDelete) {
+                                    showNotification('Kesalahan: Kategori yang akan diedit tidak dikenali.', 'error');
+                                    return;
+                                }
+                                url = `/kategori/${currentCategorySlugForEditDelete}`;
+                                httpMethod = 'PUT'; // Metode HTTP adalah PUT
+                            } else { // method === 'POST'
+                                url = '/kategori/store';
+                                httpMethod = 'POST'; // Metode HTTP adalah POST
+                            }
+
+                            const loadingNotif = showNotification('Menyimpan kategori...', 'loading');
+
+                            try {
+                                const response = await fetchAPI(url, {
+                                    method: httpMethod, // Menggunakan variabel httpMethod yang benar
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-TOKEN': csrfToken,
+                                        'Accept': 'application/json',
+                                        // X-HTTP-Method-Override hanya diperlukan jika method fetch adalah POST
+                                        // dan Anda ingin Laravel menginterpretasikannya sebagai PUT/DELETE.
+                                        // Tapi karena kita langsung set method: 'PUT', ini tidak lagi wajib.
+                                        // Namun tidak ada salahnya jika tetap ada.
+                                        // ...(httpMethod === 'PUT' ? { 'X-HTTP-Method-Override': 'PUT' } : {})
+                                    },
+                                    body: JSON.stringify({ category: categoryName }),
+                                });
+
+                                hideNotification(loadingNotif);
+                                if (response.success) {
+                                    showCentralSuccessPopup('Berhasil!', response.success);
+                                    closeCategoryModal();
+                                    if (response.new_slug) {
+                                        window.location.href = `/docs/${response.new_slug}`;
+                                    } else {
+                                        location.reload();
+                                    }
+
+                                } else {
+                                    showNotification(response.message || 'Gagal menyimpan kategori.', 'error');
+                                }
+                            } catch (error) {
+                                hideNotification(loadingNotif);
+                                showNotification(`Terjadi kesalahan: ${error.message || 'Gagal menyimpan kategori.'}`, 'error');
+                                console.error('Error (Category Save):', error);
+                            }
+                        });
+                    }
+
+                    if (cancelDeleteBtn) {
+                        cancelDeleteBtn.addEventListener('click', closeDeleteConfirmModal);
+                    }
+
+                    if (confirmDeleteBtn) {
+                        confirmDeleteBtn.addEventListener('click', async () => {
+                            if (!menuToDelete) {
+                                console.error("menuToDelete is null, cannot proceed with deletion.");
+                                showNotification("Terjadi kesalahan saat menghapus: Objek target tidak ditemukan.", "error");
+                                closeDeleteConfirmModal(); // Pastikan modal dihapus jika ini terjadi
+                                return;
+                            }
+
+                            // Simpan referensi menuToDelete lokal agar tidak terpengaruh jika direset oleh fungsi lain
+                            const itemToDelete = menuToDelete; // <--- PENTING: Salin ke variabel lokal
+                            
+                            const deleteLoadingNotif = showNotification('Menghapus...', 'loading');
+
+                            let url = '';
+                            const currentCategoryInUrl = "{{ $currentCategory ?? 'default' }}";
+                            const deletedCategoryWasCurrent = itemToDelete.type === 'category' && itemToDelete.id === currentCategoryInUrl;
+
+                            if (itemToDelete.type === 'category') { // Menggunakan itemToDelete
+                                url = `/kategori/${itemToDelete.id}`;
+                            } else { // Handles menu deletion
+                                url = `/api/navigasi/${itemToDelete.id}`;
+                            }
+
+                            try {
+                                const data = await fetchAPI(url, { method: 'DELETE' });
+
+                                hideNotification(deleteLoadingNotif);
+                                showCentralSuccessPopup('Berhasil!', data.success);
+
+                                closeDeleteConfirmModal(); // Tutup modal setelah semua notifikasi ditampilkan
+
+                                // Redirect if necessary
+                                if (deletedCategoryWasCurrent && itemToDelete.type === 'category') { // Menggunakan itemToDelete
+                                    window.location.href = '/docs'; // Arahkan ke halaman docs utama
+                                } else {
+                                    location.reload(); // Muat ulang halaman jika kategori lain atau hanya item menu yang dihapus
+                                }
+
+                            } catch (error) {
+                                hideNotification(deleteLoadingNotif);
+                                showNotification(`Gagal menghapus: ${error.message || 'Terjadi kesalahan'}`, 'error');
+                                console.error('Error deleting:', error);
+                                closeDeleteConfirmModal(); // Pastikan modal ditutup juga jika terjadi error
+                            }
+                        });
+                    }
+
+                    attachAdminEventListeners();
+                @endif
+            @endauth
+            
+            // Universal function for opening editor (can be called by editBtn)
+            // Ensure ClassicEditor is loaded before trying to use it.
+            window.openEditor = function() {
+                const kontenView = document.getElementById('kontenView');
+                const editorContainer = document.getElementById('editor-container');
+    
+                if(kontenView && editorContainer) {
+                    kontenView.classList.add('hidden');
+                    editorContainer.classList.remove('hidden');
+    
+                    if (typeof ClassicEditor !== 'undefined' && !window.ckeditorInstance) {
+                        ClassicEditor
+                            .create(document.querySelector('#editor'))
+                            .then(editor => {
+                                window.ckeditorInstance = editor;
+                                editor.setData(kontenView.innerHTML);
+                            })
+                            .catch(error => {
+                                console.error('There was an error initializing the editor.', error);
+                            });
+                    } else if (window.ckeditorInstance) {
+                        window.ckeditorInstance.setData(kontenView.innerHTML);
+                    } else {
+                        console.warn('CKEditor 5 ClassicEditor not found or failed to load. Cannot open editor.');
+                    }
+                } else {
+                    console.warn('Elements for editor (kontenView or editor-container) not found.');
                 }
-
-                attachAdminEventListeners(); 
-            @endif
-        @endauth
-
-    });
+            };
+    
+            const cancelEditorBtn = document.getElementById('cancel-editor-btn');
+            if (cancelEditorBtn) {
+                cancelEditorBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const kontenView = document.getElementById('kontenView');
+                    const editorContainer = document.getElementById('editor-container');
+                    if (kontenView && editorContainer) {
+                        editorContainer.classList.add('hidden');
+                        kontenView.classList.remove('hidden');
+                    }
+                });
+            }
+        });
     </script>
 
     {{-- NEW: Success Pop-up Modal (without OK button) --}}

@@ -95,4 +95,20 @@ class NavMenu extends Model
 
         return $branch;
     }
+
+    
+    public function isDescendantOf($potentialParentId): bool
+    {
+        $current = $this;
+        // Loop melalui parent hingga mencapai root (menu_child = 0) atau tidak ada parent
+        while ($current->menu_child !== 0 && $current->menu_child !== null) {
+            if ($current->menu_child == $potentialParentId) {
+                return true; // Ditemukan sebagai turunan
+            }
+            // Pindah ke parent berikutnya menggunakan relasi 'parent'
+            $current = $current->parent;
+            if (!$current) break; // Berhenti jika relasi parent tidak ditemukan
+        }
+        return false; // Bukan turunan
+    }
 }
