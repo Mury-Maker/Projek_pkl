@@ -32,9 +32,8 @@ class NavMenu extends Model
      */
     public function docsContent()
     {
-        return $this->hasOne(DocsContent::class, 'menu_id', 'menu_id');
+        return $this->hasMany(DocsContent::class, 'menu_id', 'menu_id');
     }
-
     /**
      * Relasi ke parent menu.
      */

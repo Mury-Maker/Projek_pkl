@@ -1,4 +1,5 @@
 <?php
+// File: app/Http/Controllers/DocumentationController.php
 
 namespace App\Http\Controllers;
 
@@ -18,15 +19,12 @@ class DocumentationController extends Controller
      */
     public function index(): View|RedirectResponse
     {
-        // Pastikan user terautentikasi untuk mengakses dokumentasi.
-        // Jika tidak, arahkan ke halaman login.
         if (!Auth::check()) {
             return redirect()->route('login');
         }
 
         $defaultCategory = 'epesantren';
 
-        // Ambil menu pertama dari kategori default
         $firstMenu = NavMenu::where('category', $defaultCategory)
             ->where('menu_child', 0)
             ->orderBy('menu_order', 'asc')
@@ -43,12 +41,10 @@ class DocumentationController extends Controller
                 return redirect()->route('docs', [
                     'category' => $defaultCategory,
                     'page' => $pageSlug,
-                    'categories' => $categories,
                 ]);
             }
         }
 
-        // Jika tidak ada menu valid, tampilkan fallback
         return $this->renderNoContentFallback($defaultCategory, collect());
     }
 
@@ -57,25 +53,18 @@ class DocumentationController extends Controller
      */
     public function show($category, $page = null): View|RedirectResponse
     {
-        // Pastikan user terautentikasi untuk melihat dokumentasi.
-        // Jika tidak, arahkan ke halaman login.
         if (!Auth::check()) {
             return redirect()->route('login');
         }
-        // Mengambil Field Kategori
+
         $categories = NavMenu::select('category')
             ->whereNotNull('category')
             ->distinct()
             ->pluck('category');
 
-        // Mengambil semua nama menu
         $allMenus = NavMenu::where('category', $category)->orderBy('menu_order')->get();
-
-        // Membuat Tree daru nav menu
         $navigation = NavMenu::buildTree($allMenus);
 
-
-        // KASUS 1: Jika tidak ada $page yang diberikan (misalnya /docs/epesantren)
         if (is_null($page)) {
             $firstMenuInCat = $allMenus->where('menu_child', 0)->sortBy('menu_order')->first();
 
@@ -89,26 +78,45 @@ class DocumentationController extends Controller
                 }
             }
 
-            // Jika tidak ada menu valid
             return $this->renderNoContentFallback($category, $navigation);
         }
 
-
-
-        // KASUS 2: Jika $page diberikan, cari item navigasi yang cocok
         $selectedNavItem = $allMenus->first(function ($menu) use ($page) {
             return Str::slug($menu->menu_nama) === $page;
         });
 
         if (!$selectedNavItem) {
-            // Jika $page diberikan tetapi TIDAK ADA item navigasi yang cocok,
-            // ini berarti halaman tersebut tidak ditemukan. Maka kita kembalikan 404.
             abort(404, 'Halaman dokumentasi tidak ditemukan.');
         }
 
-        // KASUS 3: Jika $selectedNavItem ditemukan (halaman valid)
         $menuId = $selectedNavItem->menu_id;
-        $menusWithDocs = NavMenu::with('docsContent')->find($menuId);
+        $contentDocs = null;
+        $contentTypes = [];
+        $activeContentType = request()->query('content_type', 'Default'); // Get active content type from query parameter
+
+        // Fetch all content types for this menu_id
+        $docsContents = DocsContent::where('menu_id', $menuId)->get();
+
+        if ($docsContents->isNotEmpty()) {
+            // Check if it's a child menu with multiple content types
+            if ($selectedNavItem->menu_child !== 0) {
+                // Assuming UAT, Pengkodean, Database are the expected titles
+                $contentTypes = $docsContents->pluck('title')->toArray();
+                // Set contentDocs based on activeContentType from query parameter
+                $contentDocs = $docsContents->firstWhere('title', $activeContentType);
+                // Fallback to the first available content if activeContentType is not found
+                if (!$contentDocs) {
+                    $contentDocs = $docsContents->first();
+                }
+            } else { // It's a top-level menu or a menu with only 'Default' content
+                $contentDocs = $docsContents->firstWhere('title', 'Default');
+            }
+        }
+        
+        // Ensure $contentDocs is an object with content, even if null was found
+        if (!$contentDocs) {
+            $contentDocs = (object)['content' => null, 'title' => $activeContentType];
+        }
 
 
         return view('docs.index', [
@@ -119,8 +127,10 @@ class DocumentationController extends Controller
             'selectedNavItem'   => $selectedNavItem,
             'menu_id'           => $menuId,
             'allParentMenus'    => NavMenu::where('category', $category)->orderBy('menu_nama')->get(['menu_id', 'menu_nama']),
-            'contentDocs'       => $menusWithDocs,
-            'categories' => $categories
+            'contentDocs'       => $contentDocs, // Pass the initially active content
+            'allDocsContents'   => $docsContents, // Pass all contents for the tabs/selection
+            'contentTypes'      => $contentTypes, // Pass the available content types
+            'categories'        => $categories
         ]);
     }
 
@@ -128,15 +138,13 @@ class DocumentationController extends Controller
     {
         $fallbackPageName = 'no-content-available';
 
-
         $categories = NavMenu::select('category')
             ->whereNotNull('category')
             ->distinct()
             ->pluck('category');
 
-        // Konten untuk fallback, bisa langsung diisi di sini
         $content = '<h3>Tidak Ada Dokumentasi</h3><p>Belum ada konten dokumentasi yang dibuat untuk kategori ini. Silakan login sebagai **Admin** untuk menambahkan menu dan konten.</p>';
-        $contentDocs = (object)['docsContent' => (object)['content' => $content]];
+        $contentDocs = (object)['content' => $content, 'title' => 'Default']; // Add 'title' key
 
         return view('docs.index', [
             'title'             => 'Dokumentasi ' . Str::headline($category),
@@ -145,68 +153,63 @@ class DocumentationController extends Controller
             'currentPage'       => $fallbackPageName,
             'selectedNavItem'   => null,
             'menu_id'           => 0,
-            'allParentMenus'    => collect(), // Tidak ada parent menus jika tidak ada konten
+            'allParentMenus'    => collect(),
             'contentDocs'       => $contentDocs,
+            'allDocsContents'   => collect(), // Empty collection
+            'contentTypes'      => [], // Empty array
             'categories'        => $categories,
         ]);
     }
 
     /**
-     * Menyimpan atau memperbarui konten dokumentasi untuk menu tertentu.
-     * Hanya bisa diakses oleh user dengan role 'admin'.
-     *
-     * @param \Illuminate\Http\Request $request
-     * @param int $menu_id
-     * @return \Illuminate\Http\RedirectResponse
-     */
-    /**
      * Menyimpan atau memperbarui konten dokumentasi.
      */
     public function saveContent(Request $request, $menu_id)
     {
-        // Pemeriksaan role: Hanya user yang terautentikasi dengan role 'admin' yang bisa menyimpan konten.
-        // Jika tidak, hentikan eksekusi dengan error 403 (Forbidden).
         if (!Auth::check() || (Auth::user()->role ?? '') !== 'admin') {
-            // Log::warning('Unauthorized attempt to save content by user: ' . (Auth::check() ? Auth::user()->email : 'Guest') . ' with role: ' . (Auth::user()->role ?? 'NULL'));
             abort(403, 'Anda tidak memiliki izin untuk melakukan tindakan ini.');
         }
 
         $validator = Validator::make($request->all(), [
             'content' => 'required|string',
+            'content_type' => 'nullable|string', // Validate content_type
         ]);
 
         if ($validator->fails()) {
-            return redirect()->back()->withErrors($validator)->withInput();
+            return response()->json(['message' => 'Validation Error', 'errors' => $validator->errors()], 422);
         }
 
+        $contentType = $request->input('content_type', 'Default');
+
         DocsContent::updateOrCreate(
-            ['menu_id' => $menu_id],
+            ['menu_id' => $menu_id, 'title' => $contentType], // Use menu_id and title for unique identification
             ['content' => $request->input('content')]
         );
 
-        return redirect()->back()->with('success', 'Konten berhasil disimpan.');
+        return response()->json(['success' => 'Konten berhasil disimpan!']);
     }
 
     /**
      * Menghapus konten dokumentasi.
      */
-    public function deleteContent($menu_id)
+    public function deleteContent(Request $request, $menu_id)
     {
-        // Pemeriksaan role: Hanya user yang terautentikasi dengan role 'admin' yang bisa menghapus konten.
-        // Jika tidak, hentikan eksekusi dengan error 403 (Forbidden).
         if (!Auth::check() || (Auth::user()->role ?? '') !== 'admin') {
-            // Log::warning('Unauthorized attempt to delete content by user: ' . (Auth::check() ? Auth::user()->email : 'Guest') . ' with role: ' . (Auth::user()->role ?? 'NULL'));
             abort(403, 'Anda tidak memiliki izin untuk melakukan tindakan ini.');
         }
 
-        $doc = DocsContent::where('menu_id', $menu_id)->first();
+        $contentType = $request->input('content_type', 'Default'); // Get content_type from request
+
+        $doc = DocsContent::where('menu_id', $menu_id)
+                          ->where('title', $contentType) // Specify the content type to delete
+                          ->first();
 
         if ($doc) {
             $doc->delete();
-            return redirect()->back()->with('success', 'Konten berhasil dihapus.');
+            return response()->json(['success' => 'Konten berhasil dihapus.']);
         }
 
-        return redirect()->back()->with('error', 'Konten tidak ditemukan.');
+        return response()->json(['error' => 'Konten tidak ditemukan.'], 404);
     }
 
     /**
@@ -214,11 +217,6 @@ class DocumentationController extends Controller
      */
     public function search(Request $request)
     {
-        // Untuk fungsionalitas search, Anda bisa memutuskan apakah harus diakses oleh semua user
-        // (termasuk user biasa) atau hanya admin. Berdasarkan pertanyaan sebelumnya,
-        // diasumsikan search juga hanya bisa diakses setelah login.
-        // Middleware 'auth' pada route sudah menangani ini.
-
         $query = $request->input('query');
 
         if (!$query) {
@@ -228,7 +226,6 @@ class DocumentationController extends Controller
         $results = [];
         $searchTerm = '%' . strtolower($query) . '%';
 
-        // Cari di semua menu
         $menuMatches = NavMenu::whereRaw('LOWER(TRIM(menu_nama)) LIKE ?', [$searchTerm])
             ->get();
 
@@ -242,20 +239,19 @@ class DocumentationController extends Controller
             ];
         }
 
-        // Cari di konten docs
         $contentMatches = DocsContent::with('menu')
             ->where('content', 'LIKE', "%{$query}%")
             ->get();
 
         foreach ($contentMatches as $content) {
             if ($content->menu) {
-                $key = $content->menu->menu_id . '-' . $content->menu->category;
+                $key = $content->menu->menu_id . '-' . $content->menu->category . '-' . Str::slug($content->title);
                 if (!isset($results[$key])) {
                     $results[$key] = [
                         'id' => $content->menu->menu_id,
                         'name' => $content->menu->menu_nama,
                         'category_name' => Str::headline($content->menu->category),
-                        'url' => route('docs', ['category' => $content->menu->category, 'page' => Str::slug($content->menu->menu_nama)]),
+                        'url' => route('docs', ['category' => $content->menu->category, 'page' => Str::slug($content->menu->menu_nama), 'content_type' => $content->title]),
                         'context' => Str::limit(strip_tags($content->content), 100),
                     ];
                 }

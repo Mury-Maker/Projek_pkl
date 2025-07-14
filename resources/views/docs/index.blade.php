@@ -12,8 +12,12 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     {{-- CKEditor CSS hanya dimuat jika user adalah admin --}}
-    <link rel="stylesheet" href="{{ asset('ckeditor/style.css') }}">
-    <link rel="stylesheet" href="https://cdn.ckeditor.com/ckeditor5/45.2.1/ckeditor5.css" crossorigin>
+    @auth
+        @if(auth()->user()->role === 'admin')
+            <link rel="stylesheet" href="{{ asset('ckeditor/style.css') }}">
+            <link rel="stylesheet" href="https://cdn.ckeditor.com/ckeditor5/45.2.1/ckeditor5.css" crossorigin>
+        @endif
+    @endauth
 
     <style>
         body { font-family: 'Inter', sans-serif; }
@@ -378,7 +382,6 @@
 
         #editBtn:hover{
             color: blue;
-
         }
         /* Tombol Logout */
         .logout-btn {
@@ -465,6 +468,33 @@
                 display:block;
             }
         }
+        /* Styles for content tabs */
+        .content-tabs {
+            display: flex;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .content-tabs button {
+            padding: 0.75rem 1rem;
+            border: none;
+            background-color: transparent;
+            cursor: pointer;
+            font-weight: 500;
+            color: #6b7280; /* gray-500 */
+            transition: all 0.2s ease-in-out;
+            position: relative;
+            outline: none;
+        }
+
+        .content-tabs button:hover {
+            color: #1f2937; /* gray-800 */
+        }
+
+        .content-tabs button.active {
+            color: #3b82f6; /* blue-500 */
+            border-bottom: 2px solid #3b82f6;
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -481,7 +511,7 @@
                             <i class="fas fa-bars fa-lg"></i>
                         </button>
                         <a href="{{ route('docs', ['category' => $currentCategory]) }}" class="text-2xl font-bold text-blue-600">{!! ucwords(str_replace('-',' ',$currentCategory)) !!}</a>
-                                                
+                                                    
                         @php use Illuminate\Support\Str; @endphp
 
                         <div class="relative hidden md:block">
@@ -496,24 +526,42 @@
                                         $slug = Str::slug($cats); // Slug untuk URL dan data attribute
                                         $isActive = $currentCategory === $slug;
                                     @endphp
-                                    <a href="{{ route('docs', ['category' => $slug]) }}"
-                                    class="px-3 py-2 text-sm font-medium {{ $isActive ? 'bg-gray-100 text-gray-800' : 'text-gray-700 hover:bg-gray-50' }}"
-                                    data-category-key="{{ $slug }}"
-                                    data-category-name="{{ $cats }}">
-                                     {!! ucwords(str_replace('-',' ',$cats)) !!}
-                                    </a>
+                                    <div class="flex items-center justify-between">
+                                        <a href="{{ route('docs', ['category' => $slug]) }}"
+                                           class="flex-grow px-3 py-2 text-sm font-medium {{ $isActive ? 'bg-gray-100 text-gray-800' : 'text-gray-700 hover:bg-gray-50' }}"
+                                           data-category-key="{{ $slug }}"
+                                           data-category-name="{{ $cats }}">
+                                            {!! ucwords(str_replace('-',' ',$cats)) !!}
+                                        </a>
+                                        @auth
+                                            @if(auth()->user()->role === 'admin')
+                                                <div class="flex-shrink-0 flex items-center space-x-1 pr-2">
+                                                    <button type="button" onclick="openCategoryModal('edit', '{{ $cats }}')" title="Edit Kategori" class="text-blue-500 hover:text-blue-700 p-1">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    {{-- Only allow deleting non-default categories --}}
+                                                    @if($slug !== 'epesantren') 
+                                                        <button type="button" onclick="confirmDeleteCategory('{{ $slug }}', '{{ $cats }}')" title="Hapus Kategori" class="text-red-500 hover:text-red-700 p-1">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    @endif
+                                                </div>
+                                            @endif
+                                        @endauth
+                                    </div>
                                 @endforeach
                                 @auth
                                     @if(auth()->user()->role === 'admin')
                                         <div class="border-t border-gray-200 my-1"></div>
                                         
-                                        <button onclick="openCategoryModal()" class="text-blue-600 hover:underline text-sm" style="padding:10px;">
+                                        <button onclick="openCategoryModal('create')" class="text-blue-600 hover:underline text-sm" style="padding:10px;">
                                             + Tambah Kategori
                                         </button>
                                     @endif
                                 @endauth
                             </div>
                         </div>
+                    </div>
 
                     {{-- Bagian Tengah Header (untuk Search Button) --}}
                     <div class="search-button-wrapper">
@@ -533,7 +581,7 @@
                                 Selamat Datang:
                                 <span class="role-text">{{ ucfirst(auth()->user()->role) }}</span>
                             </span>
-                    
+                        
                             <form id="logout-form" method="POST" action="{{ route('logout') }}">
                                 @csrf
                                 <button type="submit" class="logout-btn" id="logout-btn">Log Out</button>
@@ -541,7 +589,7 @@
                         @else
                             <a href="{{ route('login') }}" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition">Log In</a>
                         @endauth
-                    </div>                    
+                    </div>                        
                 </div>
             </div>
         </header>
@@ -550,7 +598,7 @@
             <div id="sidebar-backdrop" class="backdrop"></div>
 
             <aside class="w-72 flex-shrink-0 overflow-y-auto bg-stone border-r border-gray-200 p-6">
-                 
+                            
                 {{-- Sidebar Tambahan Mobile (akan tampil saat responsif) --}}
                 <div class="block md:hidden space-y-4 mb-6">
                     {{-- Kategori --}}
@@ -562,38 +610,55 @@
                         </div>
                     @endauth
                     
-                            <button id="category-dropdown-btn" class="flex items-center px-4 py-2 text-base font-medium rounded-lg transition-colors focus:outline-none">
-                                <span id="category-button-text">{!! ucwords(str_replace('-',' ',$currentCategory)) !!}</span>
-                                <i class="ml-2 fa fa-chevron-down text-xs"></i>
-                            </button>
+                        <button id="category-dropdown-btn-mobile" class="flex items-center px-4 py-2 text-base font-medium rounded-lg transition-colors focus:outline-none">
+                            <span id="category-button-text-mobile">{!! ucwords(str_replace('-',' ',$currentCategory)) !!}</span>
+                            <i class="ml-2 fa fa-chevron-down text-xs"></i>
+                        </button>
 
-                            <div id="category-dropdown-menu" class="header-dropdown-menu">
-                                @foreach ($categories as $cats)
-                                    @php
-                                        $slug = Str::slug($cats); // Slug untuk URL dan data attribute
-                                        $isActive = $currentCategory === $slug;
-                                    @endphp
+                        <div id="category-dropdown-menu-mobile" class="header-dropdown-menu">
+                            @foreach ($categories as $cats)
+                                @php
+                                    $slug = Str::slug($cats); // Slug untuk URL dan data attribute
+                                    $isActive = $currentCategory === $slug;
+                                @endphp
+                                <div class="flex items-center justify-between">
                                     <a href="{{ route('docs', ['category' => $slug]) }}"
-                                    class="px-3 py-2 text-sm font-medium {{ $isActive ? 'bg-gray-100 text-gray-800' : 'text-gray-700 hover:bg-gray-50' }}"
+                                    class="flex-grow px-3 py-2 text-sm font-medium {{ $isActive ? 'bg-gray-100 text-gray-800' : 'text-gray-700 hover:bg-gray-50' }}"
                                     data-category-key="{{ $slug }}"
                                     data-category-name="{{ $cats }}">
-                                     {!! ucwords(str_replace('-',' ',$cats)) !!}
+                                    {!! ucwords(str_replace('-',' ',$cats)) !!}
                                     </a>
-                                @endforeach
-                                @auth
-                                    @if(auth()->user()->role === 'admin')
-                                        <div class="border-t border-gray-200 my-1"></div>
-                                        
-                                        <button onclick="openCategoryModal()" class="text-blue-600 hover:underline text-sm" style="padding:10px;">
-                                            + Tambah Kategori
-                                        </button>
-                                    @endif
-                                @endauth
-                            </div>
-                     </div>
+                                    @auth
+                                        @if(auth()->user()->role === 'admin')
+                                            <div class="flex-shrink-0 flex items-center space-x-1 pr-2">
+                                                <button type="button" onclick="openCategoryModal('edit', '{{ $cats }}')" title="Edit Kategori" class="text-blue-500 hover:text-blue-700 p-1">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                {{-- Only allow deleting non-default categories --}}
+                                                @if($slug !== 'epesantren')
+                                                    <button type="button" onclick="confirmDeleteCategory('{{ $slug }}', '{{ $cats }}')" title="Hapus Kategori" class="text-red-500 hover:text-red-700 p-1">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                @endif
+                                            </div>
+                                        @endif
+                                    @endauth
+                                </div>
+                            @endforeach
+                            @auth
+                                @if(auth()->user()->role === 'admin')
+                                    <div class="border-t border-gray-200 my-1"></div>
+                                    
+                                    <button onclick="openCategoryModal()" class="text-blue-600 hover:underline text-sm" style="padding:10px;">
+                                        + Tambah Kategori
+                                    </button>
+                                @endif
+                            @endauth
+                        </div>
+                    </div>
                 </div>
 
-    {{-- Navigasi Utama --}
+            {{-- Navigasi Utama --}}
                 {{-- Tombol "Tambah Menu Baru" hanya untuk admin --}}
                 @auth
                     @if(auth()->user()->role === 'admin')
@@ -619,24 +684,25 @@
                     @include('docs._menu_item', [
                         'items' => $navigation,
                         'editorMode' => auth()->check() && (auth()->user()->role ?? '') === 'admin',
-                        'selectedNavItemId' => $selectedNavItem->menu_id ?? null
+                        'selectedNavItemId' => $selectedNavItem->menu_id ?? null,
+                        'currentCategory' => $currentCategory // Pass currentCategory here
                     ])
                 </nav>
                 <div class="relative lg:hidden header-spacer-right space-x-4 flex items-center">
-                                    <form method="POST" action="{{ route('logout') }}">
-                    @auth
-                        @csrf
+                                                    <form method="POST" action="{{ route('logout') }}">
+                        @auth
+                            @csrf
                             <button type="submit"
                                 class="mt-2 w-full bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 text-sm">
-                                     Log Out
+                                    Log Out
                             </button>
                         </form>
-                    @else
-                        <a href="{{ route('login') }}"
-                            class="w-full inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm text-center">
-                                Log In
-                        </a>
-                            @endauth
+                        @else
+                            <a href="{{ route('login') }}"
+                                class="w-full inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm text-center">
+                                    Log In
+                            </a>
+                                @endauth
                 </div>
 
             </aside>
@@ -649,40 +715,49 @@
                     @auth
                         @if(auth()->user()->role === 'admin')
                             {{-- Hanya tampilkan tombol edit jika ada menu_id yang valid --}}
-                            @if(isset($menu_id) && $menu_id > 0)
+                            @if(isset($menu_id) && $menu_id > 0 && ($selectedNavItem->menu_status ?? 0) == 1)
                                 <button id="editBtn" onclick="openEditor()"><i class="fa-solid fa-file-pen"></i></button>
                             @endif
                         @endif
                     @endauth
                 </div>
 
+                {{-- Content Tabs for UAT, Pengkodean, Database --}}
+                @if(isset($selectedNavItem) && $selectedNavItem->menu_status == 1 && $selectedNavItem->menu_child !== 0 && !empty($contentTypes))
+                    <div class="content-tabs" id="content-tabs">
+                        @foreach($contentTypes as $type)
+                            <button type="button" class="tab-button" data-content-type="{{ $type }}">{{ $type }}</button>
+                        @endforeach
+                    </div>
+                @endif
+
                 {{-- Konten Dokumentasi dan Editor (berada langsung di index.blade.php) --}}
                 <div class="prose max-w-none" id="documentation-content">
                     {{-- Tampilan konten dari database --}}
                     <div id="kontenView" class="ck-content">
                         {{-- Menggunakan $contentDocs untuk menampilkan konten --}}
-                        {!! $contentDocs->docsContent->content ?? "Konten Belum Tersedia" !!}
+                        {!! $contentDocs->content ?? "Konten Belum Tersedia" !!}
                     </div>
 
                     {{-- Editor CKEditor (hanya untuk admin dan jika ada menu_id yang valid) --}}
                     @auth
                         @if(auth()->user()->role === 'admin')
-                            {{-- Editor hanya ditampilkan jika ada item navigasi yang dipilih (menu_id > 0) --}}
-                            @if(isset($menu_id) && $menu_id > 0)
+                            {{-- Editor hanya ditampilkan jika ada item navigasi yang dipilih (menu_id > 0) DAN menu_statusnya 1 --}}
+                            @if(isset($menu_id) && $menu_id > 0 && ($selectedNavItem->menu_status ?? 0) == 1)
                                 <div class="main-container">
                                     <div class="editor-container hidden" id="editor-container">
                                         <form id="editor-form" action="{{ route('docs.save', ['menu_id' => $menu_id]) }}" method="POST">
                                             @csrf
-                                            {{-- Tambahkan hidden input untuk category dan page untuk redirect setelah save --}}
                                             <input type="hidden" name="currentCategoryFromForm" value="{{ $currentCategory }}">
                                             <input type="hidden" name="currentPageFromForm" value="{{ $currentPage }}">
+                                            <input type="hidden" name="content_type" id="editor-content-type" value="{{ $contentDocs->title ?? 'Default' }}">
 
                                             <textarea name="content" id="editor" class="ckeditor">
-                                                {{ $contentDocs->docsContent->content ?? "" }}
+                                                {{ $contentDocs->content ?? "" }}
                                             </textarea>
-                                            <div class="buttons">
-                                                <button type="submit" class="btn btn-simpan">Update</button>
-                                                <button type="button" id="cancel-editor-btn" class="btn btn-batal"><a href="{{ route('docs', ['category' => $currentCategory, 'page' => $currentPage]) }}">Batal</a></button>
+                                            <div class="buttons mt-4 flex justify-end space-x-3">
+                                                <button type="button" id="cancel-editor-btn" class="btn btn-batal"><i class="fa fa-times-circle mr-2"></i>Batal</button>
+                                                <button type="submit" class="btn btn-simpan"><i class="fa fa-save mr-2"></i>Update</button>
                                             </div>
                                         </form>
                                     </div>
@@ -748,7 +823,7 @@
                         </div>
                         <div class="mb-6">
                             <label class="inline-flex items-center">
-                                <input type="checkbox" id="form_menu_status" name="menu_status" value="0" class="form-checkbox h-5 w-5 text-blue-600">
+                                <input type="checkbox" id="form_menu_status" name="menu_status" value="1" class="form-checkbox h-5 w-5 text-blue-600">
                                 <span class="ml-2 text-gray-700">Centang Jika Ingin Menu Ini Memiliki Konten</span>
                             </label>
                         </div>
@@ -759,8 +834,7 @@
                     </form>
                 </div>
             </div>
-                        <!-- Modal Tambah Kategori -->
-            <div id="categoryModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">
+                        <div id="categoryModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">
                 <div class="bg-white w-full max-w-md rounded-lg shadow-lg p-6">
                     <h2 id="categoryModalTitle" class="text-lg font-semibold mb-4">Tambah Kategori</h2>
 
@@ -776,9 +850,9 @@
 
                         <div class="flex justify-end space-x-2">
                             <button type="button" onclick="closeCategoryModal()"
-                                    class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Batal</button>
+                                            class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Batal</button>
                             <button type="submit"
-                                    class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Simpan</button>
+                                            class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Simpan</button>
                         </div>
                     </form>
                 </div>
@@ -808,49 +882,85 @@
     @endauth
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            document.querySelectorAll('[data-toggle^="submenu-"]').forEach(el => {
-                el.addEventListener('click', () => {
-                    const targetId = el.getAttribute('data-toggle');
-                    const submenu = document.getElementById(targetId);
-                    const icon = el.closest('.sidebar-menu-item-wrapper')?.querySelector('.fa-chevron-left');
+        let currentEditorInstance; // Deklarasikan variabel global untuk instance CKEditor
 
-                    if (submenu) {
-                        const expanded = el.getAttribute('aria-expanded') === 'true';
-                        el.setAttribute('aria-expanded', !expanded);
-                        submenu.classList.toggle('hidden');
-
-                        if (icon) {
-                            icon.classList.toggle('rotate-[-90deg]', !expanded);
-                            icon.classList.toggle('rotate-0', expanded);
-                        }
-                    }
-                });
-            });
-        });
-    </script>
-
-    
-
-    <script>
         function openEditor() {
             const kontenView = document.getElementById('kontenView');
             const editorContainer = document.getElementById('editor-container');
+            const editorContentTypeInput = document.getElementById('editor-content-type');
+            const editBtn = document.getElementById('editBtn'); // Get the edit button
 
-        // Sembunyikan tampilan view dan tampilkan editor
+            // Hide the view and show the editor
             kontenView.classList.add('hidden');
             editorContainer.classList.remove('hidden');
+            if (editBtn) {
+                editBtn.classList.add('hidden'); // Hide the edit button when editor is open
+            }
 
-        // Inisialisasi CKEditor jika belum
-            if (!CKEDITOR.instances.editor) {
-                CKEDITOR.replace('editor');
+            // Set content for the editor based on the active tab, or default
+            const activeTabButton = document.querySelector('.content-tabs button.active');
+            let contentType = 'Default'; // Default value if no tabs or no active tab
+            if (activeTabButton) {
+                contentType = activeTabButton.dataset.contentType;
+            }
+            editorContentTypeInput.value = contentType; // Update hidden input for form submission
+
+            // Find content matching the active tab's content type
+            const allDocsContents = @json($allDocsContents ?? []);
+            const currentContent = allDocsContents.find(doc => doc.title === contentType);
+            const contentToLoad = currentContent ? currentContent.content : '# Belum ada konten untuk ' + contentType;
+
+            // Check if ClassicEditor is defined (from ckeditor5.umd.js)
+            if (typeof ClassicEditor === 'undefined') {
+                showNotification('Pustaka CKEditor tidak dimuat. Periksa konsol browser untuk kesalahan.', 'error', 5000);
+                console.error('ClassicEditor tidak terdefinisi. Pastikan skrip CKEditor UMD dimuat dengan benar.');
+                return;
+            }
+
+            // Initialize CKEditor if not initialized, or just set data if already exists
+            if (!currentEditorInstance) {
+                const editorConfigFromMainJS = window.CKEDITOR_CONFIG || {}; // Use a more specific global variable name
+
+                const finalEditorConfig = {
+                    ...editorConfigFromMainJS, // Merge config from main.js
+                    ckfinder: {
+                        uploadUrl: '{{ route('ckeditor.upload') . '?_token=' . csrf_token() }}'
+                    },
+                    simpleUpload: { // Ensure SimpleUploadAdapter is configured
+                        uploadUrl: '{{ route('ckeditor.upload') . '?_token=' . csrf_token() }}'
+                    },
+                    // Ensure plugins and toolbar are also merged if your main.js sets them
+                    plugins: [...(editorConfigFromMainJS.plugins || []), SimpleUploadAdapter].filter((v, i, a) => a.indexOf(v) === i), // Avoid plugin duplication
+                    toolbar: editorConfigFromMainJS.toolbar // Use toolbar from main.js
+                };
+
+                // Add a slight delay to ensure textarea is fully rendered and visible
+                setTimeout(() => {
+                    ClassicEditor
+                        .create(document.querySelector('#editor'), finalEditorConfig)
+                        .then(editor => {
+                            currentEditorInstance = editor;
+                            editor.setData(contentToLoad); // Set content fetched from the server
+                        })
+                        .catch(error => {
+                            console.error('Kesalahan saat menginisialisasi CKEditor:', error);
+                            showNotification('Gagal menginisialisasi editor. Detail: ' + error.message, 'error', 5000);
+                        });
+                }, 50); // Small delay, e.g., 50ms
+            } else {
+                currentEditorInstance.setData(contentToLoad); // Just set data if editor is already initialized
             }
         }
-        function promptNewCategory() {
-            const name = prompt("Masukkan nama kategori baru:");
-            if (name && name.trim() !== '') {
-                const slug = name.trim().toLowerCase().replace(/\s+/g, '-');
-                window.location.href = `/docs/${slug}`;
+
+        function closeEditor() {
+            const kontenView = document.getElementById('kontenView');
+            const editorContainer = document.getElementById('editor-container');
+            const editBtn = document.getElementById('editBtn'); // Get the edit button
+
+            editorContainer.classList.add('hidden');
+            kontenView.classList.remove('hidden');
+            if (editBtn) {
+                editBtn.classList.remove('hidden'); // Show the edit button when editor is closed
             }
         }
 
@@ -876,37 +986,7 @@
             categoryModal.classList.add('hidden');
         }
 
-        categoryForm.addEventListener('submit', function (e) {
-            e.preventDefault();
-
-            const categoryName = document.getElementById('form_category_nama').value;
-            const method = document.getElementById('form_category_method').value;
-
-            fetch('/kategori/store', {
-                method: method === 'PUT' ? 'PUT' : 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
-                },
-                body: JSON.stringify({ category: categoryName }),
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Kategori berhasil ditambahkan.');
-                    closeCategoryModal();
-                    location.reload(); // atau perbarui dropdown kategori
-                } else {
-                    alert('Gagal menambahkan kategori.');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Terjadi kesalahan.');
-            });
-        });
-
-
+        // Moved category form submission logic to general script block
 
     </script>
     
@@ -918,24 +998,26 @@
         const logoutForm = document.getElementById('logout-form');
         const logoutBtn = document.getElementById('logout-btn');
 
-        logoutBtn.addEventListener('click', function (e) {
-            e.preventDefault(); // selalu hentikan submit dulu
+        if (logoutBtn) { // Check if logoutBtn exists before adding event listener
+            logoutBtn.addEventListener('click', function (e) {
+                e.preventDefault(); // always prevent submission first
 
-            Swal.fire({
-                title: 'Yakin ingin logout?',
-                text: "Sesi Anda akan berakhir.",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Ya, Logout',
-                cancelButtonText: 'Batal'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    logoutForm.submit(); // hanya submit jika dikonfirmasi
-                }
+                Swal.fire({
+                    title: 'Yakin ingin logout?',
+                    text: "Sesi Anda akan berakhir.",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Ya, Logout',
+                    cancelButtonText: 'Batal'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        logoutForm.submit(); // only submit if confirmed
+                    }
+                });
             });
-        });
+        }
 
         // =================================
         // VARIABEL & FUNGSI UTILITAS (GLOBAL)
@@ -1095,10 +1177,11 @@
 
                 searchTimeout = setTimeout(async () => {
                     try {
-                        const data = await fetchAPI(`/api/search?query=${query}`); 
+                        const data = await fetchAPI(`/api/search?query=${query}`);    
                         searchResultsList.innerHTML = '';
                         
                         if (data.results && data.results.length > 0) {
+                            // Group results by menu name first
                             const groupedResultsByMenuName = data.results.reduce((acc, result) => {
                                 if (!acc[result.name]) {
                                     acc[result.name] = [];
@@ -1143,14 +1226,13 @@
         // =================================
 
         const sidebar = document.getElementById('sidebar-navigation');
-        const currentPathname = window.location.pathname; // Dapatkan path URL saat ini
-        const urlParams = new URLSearchParams(window.location.search);
-        const selectedMenuIdFromUrl = urlParams.get('page'); // Asumsi 'page' param mengandung menu_id yang dipilih
+        // No need for currentPathname, we'll rely on the active class from PHP
+        // No need for selectedMenuIdFromUrl, as the active state is handled by Blade and `initSidebarDropdown`
 
         if (sidebar) {
             sidebar.addEventListener('click', (e) => {
                 const trigger = e.target.closest('.menu-arrow-icon');
-                const menuLink = e.target.closest('.menu-link'); // Tangkap klik pada link menu juga
+                // const menuLink = e.target.closest('.menu-link'); // Keep if you need to intercept link clicks
 
                 // Handle dropdown toggle for parent menus
                 if (trigger) {
@@ -1164,29 +1246,25 @@
                         const isCurrentlyOpen = submenu.classList.contains('open');
 
                         // Close other top-level submenus to avoid too many open at once
-                        // This part is good, keep it as is if you want only one top-level submenu open
+                        // Only close if it's not the current submenu being toggled
+                        // and not a parent of the current submenu being toggled
                         const allOpenSubmenus = sidebar.querySelectorAll('.submenu-container.open');
                         allOpenSubmenus.forEach(openSubmenu => {
-                            // Only close if it's not the current submenu being toggled
-                            // and not a parent of the current submenu being toggled
-                            if (openSubmenu !== submenu && !submenu.contains(openSubmenu)) {
-                                // Check if openSubmenu is NOT an ancestor of the currently selected item
-                                let isAncestorOfSelectedItem = false;
-                                let tempParent = submenu;
-                                while (tempParent && tempParent !== sidebar) {
-                                    if (tempParent === openSubmenu) {
-                                        isAncestorOfSelectedItem = true;
-                                        break;
-                                    }
-                                    tempParent = tempParent.parentElement.closest('.submenu-container');
+                            let isAncestorOfSelectedItem = false;
+                            let tempParent = submenu;
+                            while (tempParent && tempParent !== sidebar) {
+                                if (tempParent === openSubmenu) {
+                                    isAncestorOfSelectedItem = true;
+                                    break;
                                 }
-                                if (!isAncestorOfSelectedItem) {
-                                    openSubmenu.classList.remove('open');
-                                    const relatedTrigger = sidebar.querySelector(`[data-toggle="${openSubmenu.id}"]`);
-                                    if (relatedTrigger) {
-                                        relatedTrigger.setAttribute('aria-expanded', 'false');
-                                        relatedTrigger.querySelector('i')?.classList.remove('open');
-                                    }
+                                tempParent = tempParent.parentElement.closest('.submenu-container');
+                            }
+                            if (!isAncestorOfSelectedItem) {
+                                openSubmenu.classList.remove('open');
+                                const relatedTrigger = sidebar.querySelector(`[data-toggle="${openSubmenu.id}"]`);
+                                if (relatedTrigger) {
+                                    relatedTrigger.setAttribute('aria-expanded', 'false');
+                                    relatedTrigger.querySelector('i')?.classList.remove('open');
                                 }
                             }
                         });
@@ -1197,11 +1275,6 @@
                             icon.classList.toggle('open', !isCurrentlyOpen);
                         }
                     }
-                } else if (menuLink) {
-                    // If a menu link is clicked, ensure its parent is open before navigation
-                    // This is less about keeping it open after reload, and more about visual state before navigation
-                    // However, the `openActiveMenuParents` will handle persistence after reload.
-                    // No `e.preventDefault()` here if you want the link to navigate normally.
                 }
             });
         }
@@ -1211,19 +1284,13 @@
             if (!sidebarElement) return;
 
             const openActiveMenuParents = () => {
-                // Find the currently active menu item based on the selectedNavItemId from Blade
-                // We assume $selectedNavItem->menu_id is passed from Laravel to JS via Blade.
-                // Example: const selectedMenuItemElement = sidebarElement.querySelector(`[data-menu-id="${selectedNavItemId}"]`);
-                // You already have a .bg-blue-100 class for the active item.
                 const activeItemElement = sidebarElement.querySelector('.bg-blue-100');
 
                 if (activeItemElement) {
-                    // Find all parent submenu containers for the active item
                     let currentElement = activeItemElement;
                     while (currentElement && currentElement !== sidebarElement) {
                         if (currentElement.classList.contains('submenu-container')) {
                             currentElement.classList.add('open');
-                            // Also update the arrow icon of its trigger
                             const triggerButton = sidebarElement.querySelector(`[data-toggle="${currentElement.id}"]`);
                             if (triggerButton) {
                                 const icon = triggerButton.querySelector('i');
@@ -1246,62 +1313,38 @@
         // =================================
         // LOGIKA DROPDOWN KATEGORI HEADER
         // =================================
-        const button = document.getElementById('category-dropdown-btn');
-        const menu = document.getElementById('category-dropdown-menu');
-
-        button.addEventListener('click', () => {
-            const isVisible = menu.classList.contains('opacity-100');
-
-            if (isVisible) {
-                menu.classList.remove('opacity-100', 'visible');
-                menu.classList.add('opacity-0', 'invisible');
-            } else {
-                menu.classList.remove('opacity-0', 'invisible');
-                menu.classList.add('opacity-100', 'visible');
-            }
-        });
-
-        // Optional: close menu if clicking outside
-        document.addEventListener('click', function (e) {
-            if (!button.contains(e.target) && !menu.contains(e.target)) {
-                menu.classList.remove('opacity-100', 'visible');
-                menu.classList.add('opacity-0', 'invisible');
-            }
-        });
         const categoryDropdownBtn = document.getElementById('category-dropdown-btn');
-        const categoryDropdownText = document.getElementById('category-button-text'); // Dapatkan elemen span
+        const categoryDropdownText = document.getElementById('category-button-text'); // Get the span element
         const categoryDropdownMenu = document.getElementById('category-dropdown-menu');
 
-        // Dapatkan nama kategori saat ini dari Laravel ($currentCategory)
-        // Ini akan mengambil nilai dari PHP saat halaman dimuat
-        const currentCategoryFromBlade = "{{ $currentCategory ?? 'default' }}"; 
+        // Mobile category dropdown elements
+        const categoryDropdownBtnMobile = document.getElementById('category-dropdown-btn-mobile');
+        const categoryDropdownTextMobile = document.getElementById('category-button-text-mobile');
+        const categoryDropdownMenuMobile = document.getElementById('category-dropdown-menu-mobile');
 
-        // Fungsi untuk memperbarui teks tombol dropdown
-        const updateCategoryButtonText = (categoryKey) => {
-            let categoryDisplayName = 'Kategori'; // Default jika tidak cocok
-            if (categoryKey === 'epesantren') {
-                categoryDisplayName = 'Epesantren';
-            } else if (categoryKey === 'adminsekolah') {
-                categoryDisplayName = 'Admin Sekolah';
-            }
-            // Tambahkan kondisi lain jika ada kategori baru di masa mendatang
-            // else if (categoryKey === 'nama_kategori_baru') {
-            //     categoryDisplayName = 'Nama Kategori Baru';
-            // }
 
-            if (categoryDropdownText) {
-                categoryDropdownText.textContent = categoryDisplayName;
+        // Get current category name from Laravel ($currentCategory)
+        const currentCategoryFromBlade = "{{ $currentCategory ?? 'default' }}";    
+
+        // Function to update dropdown button text
+        const updateCategoryButtonText = (categoryKey, targetTextElement) => {
+            let categoryDisplayName = categoryKey.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+            if (targetTextElement) {
+                targetTextElement.textContent = categoryDisplayName;
             }
         };
 
-        // Panggil fungsi ini saat DOM dimuat untuk mengatur teks awal
-        // Ini adalah bagian penting yang memastikan teks tombol benar setelah reload halaman
-        updateCategoryButtonText(currentCategoryFromBlade);
+        // Call this function on DOM load to set initial text
+        updateCategoryButtonText(currentCategoryFromBlade, categoryDropdownText);
+        if (categoryDropdownTextMobile) {
+            updateCategoryButtonText(currentCategoryFromBlade, categoryDropdownTextMobile);
+        }
+        
 
 
         if (categoryDropdownBtn && categoryDropdownMenu) {
             categoryDropdownBtn.addEventListener('click', (e) => {
-                e.stopPropagation(); // Mencegah event click menyebar ke document dan langsung menutup dropdown
+                e.stopPropagation(); // Prevent click event from propagating to document and closing dropdown immediately
                 categoryDropdownMenu.classList.toggle('open');
                 const chevronIcon = categoryDropdownBtn.querySelector('.fa-chevron-down, .fa-chevron-up');
                 if (categoryDropdownMenu.classList.contains('open')) {
@@ -1318,37 +1361,83 @@
                 if (!categoryDropdownBtn.contains(event.target) && !categoryDropdownMenu.contains(event.target)) {
                     categoryDropdownMenu.classList.remove('open');
                     const chevronIcon = categoryDropdownBtn.querySelector('.fa-chevron-up');
-                    if (chevronIcon) { // Pastikan ikon ada sebelum mencoba menghapus kelas
+                    if (chevronIcon) { // Ensure icon exists before trying to remove class
                         chevronIcon.classList.remove('fa-chevron-up');
                         chevronIcon.classList.add('fa-chevron-down');
                     }
                 }
             });
 
-            // Menangani klik pada item dropdown
+            // Handle clicks on dropdown items
             categoryDropdownMenu.querySelectorAll('a').forEach(item => {
                 item.addEventListener('click', (e) => {
-                    // TIDAK perlu e.preventDefault() karena kita ingin link navigasi berjalan
-                    // Ambil category key dari atribut href
-                    const href = item.getAttribute('href'); // Gunakan 'item' bukan 'e.target' untuk memastikan ini adalah <a>
+                    // NO need for e.preventDefault() because we want the link navigation to happen
+                    // Get category key from href attribute
+                    const href = item.getAttribute('href'); // Use 'item' not 'e.target' to ensure this is an <a>
                     const url = new URL(href);
-                    const newCategoryKey = url.searchParams.get('category'); // Dapatkan nilai 'category' dari URL
+                    const newCategoryKey = url.searchParams.get('category'); // Get 'category' value from URL
 
                     if (newCategoryKey) {
-                        updateCategoryButtonText(newCategoryKey); // Update teks tombol berdasarkan key baru
+                        updateCategoryButtonText(newCategoryKey, categoryDropdownText); // Update button text based on new key
                     }
 
-                    // Tutup dropdown setelah item diklik
+                    // Close the dropdown after item is clicked
                     categoryDropdownMenu.classList.remove('open');
                     const chevronIcon = categoryDropdownBtn.querySelector('.fa-chevron-up');
                     if (chevronIcon) {
                         chevronIcon.classList.remove('fa-chevron-up');
                         chevronIcon.classList.add('fa-chevron-down');
                     }
-                    // Navigasi ke URL yang dipilih akan terjadi secara otomatis karena ini adalah tag <a>
+                    // Navigation to the selected URL will happen automatically because it's an <a> tag
                 });
             });
         }
+        
+        // Mobile Category Dropdown Logic
+        if (categoryDropdownBtnMobile && categoryDropdownMenuMobile) {
+            categoryDropdownBtnMobile.addEventListener('click', (e) => {
+                e.stopPropagation();
+                categoryDropdownMenuMobile.classList.toggle('open');
+                const chevronIcon = categoryDropdownBtnMobile.querySelector('.fa-chevron-down, .fa-chevron-up');
+                if (categoryDropdownMenuMobile.classList.contains('open')) {
+                    chevronIcon.classList.remove('fa-chevron-down');
+                    chevronIcon.classList.add('fa-chevron-up');
+                } else {
+                    chevronIcon.classList.remove('fa-chevron-up');
+                    chevronIcon.classList.add('fa-chevron-down');
+                }
+            });
+
+            document.addEventListener('click', (event) => {
+                if (!categoryDropdownBtnMobile.contains(event.target) && !categoryDropdownMenuMobile.contains(event.target)) {
+                    categoryDropdownMenuMobile.classList.remove('open');
+                    const chevronIcon = categoryDropdownBtnMobile.querySelector('.fa-chevron-up');
+                    if (chevronIcon) {
+                        chevronIcon.classList.remove('fa-chevron-up');
+                        chevronIcon.classList.add('fa-chevron-down');
+                    }
+                }
+            });
+
+            categoryDropdownMenuMobile.querySelectorAll('a').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    const href = item.getAttribute('href');
+                    const url = new URL(href);
+                    const newCategoryKey = url.searchParams.get('category');
+
+                    if (newCategoryKey) {
+                        updateCategoryButtonText(newCategoryKey, categoryDropdownTextMobile);
+                    }
+                    categoryDropdownMenuMobile.classList.remove('open');
+                    const chevronIcon = categoryDropdownBtnMobile.querySelector('.fa-chevron-up');
+                    if (chevronIcon) {
+                        chevronIcon.classList.remove('fa-chevron-up');
+                        chevronIcon.classList.add('fa-chevron-down');
+                    }
+                });
+            });
+        }
+
 
         // =================================
         // NEW CENTRAL SUCCESS POPUP LOGIC
@@ -1383,12 +1472,16 @@
                 const categoryModal = document.getElementById('categoryModal');
                 const categoryForm = document.getElementById('categoryForm');
                 const categoryModalTitle = document.getElementById('categoryModalTitle');
+                const deleteContentBtn = document.getElementById('delete-content-btn'); // New delete content button
 
                 let menuToDelete = null;
 
+                // Category modal functions (already mostly correct, just ensuring scope)
+                // These are already defined globally above, no need to redefine them here.
+                // Re-added them for clarity on which functions are available.
                 function openCategoryModal(mode = 'create', defaultName = '') {
                     if (!categoryForm || !categoryModalTitle) {
-                        alert('Form kategori tidak ditemukan!');
+                        showNotification('Form kategori tidak ditemukan!', 'error');
                         return;
                     }
 
@@ -1401,8 +1494,104 @@
                 }
 
                 function closeCategoryModal() {
-                categoryModal.classList.add('hidden');
-            }
+                    categoryModal.classList.add('hidden');
+                }
+                
+                // New function for category deletion confirmation (using SweetAlert2)
+                const confirmDeleteCategory = (categorySlug, categoryName) => {
+                    console.log('Fungsi confirmDeleteCategory dipanggil untuk:', categoryName); // Tambahkan ini
+                    Swal.fire({
+                        title: 'Yakin ingin menghapus kategori?',
+                        text: `Anda akan menghapus kategori "${categoryName}" beserta semua menu dan konten di dalamnya. Tindakan ini tidak dapat dibatalkan.`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#3085d6',
+                        confirmButtonText: 'Ya, Hapus Kategori',
+                        cancelButtonText: 'Batal'
+                    }).then(async (result) => {
+                        if (result.isConfirmed) {
+                            console.log('Konfirmasi SweetAlert2: Dihapus!'); // Tambahkan ini
+                            const loadingNotif = showNotification('Menghapus kategori...', 'loading');
+                            try {
+                                const data = await fetchAPI(`/kategori/${categorySlug}`, {
+                                    method: 'DELETE',
+                                    headers: {
+                                        'X-CSRF-TOKEN': csrfToken,
+                                    }
+                                });
+                                hideNotification(loadingNotif);
+                                if (data.success) {
+                                    showCentralSuccessPopup(data.success);
+                                    // Redirect to the default category or home after deleting a category
+                                    window.location.href = `/docs/epesantren`;
+                                } else {
+                                    showNotification(data.message || 'Gagal menghapus kategori.', 'error');
+                                }
+                            } catch (error) {
+                                console.error('Error deleting category:', error);
+                                hideNotification(loadingNotif);
+                                showNotification(error.message || 'Terjadi kesalahan saat menghapus kategori.', 'error');
+                            }
+                        }
+                    });
+                };
+
+
+                // Category Form Submission
+                if (categoryForm) {
+                    categoryForm.addEventListener('submit', async function (e) {
+                        e.preventDefault();
+
+                        const loadingNotif = showNotification('Memproses kategori...', 'loading');
+
+                        const categoryNameInput = document.getElementById('form_category_nama');
+                        const categoryName = categoryNameInput.value;
+                        const method = document.getElementById('form_category_method').value;
+                        
+                        let url = '/kategori'; // For POST (create)
+                        let httpMethod = 'POST';
+
+                        if (method === 'PUT') {
+                            // When editing, the URL should include the original slug of the category being edited.
+                            // We're using `currentCategory` from Blade for this.
+                            url = `/kategori/${currentCategory}`;
+                            httpMethod = 'POST'; // Laravel route uses POST with _method PUT for updates
+                        }
+
+                        try {
+                            const options = {
+                                method: httpMethod,
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': csrfToken,
+                                },
+                                body: JSON.stringify({ category: categoryName }),
+                            };
+
+                            if (method === 'PUT') {
+                                options.headers['X-HTTP-Method-Override'] = 'PUT';
+                            }
+
+                            const data = await fetchAPI(url, options);
+                            
+                            hideNotification(loadingNotif);    
+                            if (data.success) {
+                                showCentralSuccessPopup(data.success);
+                                closeCategoryModal();
+                                // Redirect to the new category slug if it was an edit or new category
+                                const newSlug = data.new_slug || categoryName.toLowerCase().replace(/\s+/g, '-');
+                                window.location.href = `/docs/${newSlug}`;
+                            } else {
+                                showNotification(data.message || 'Gagal memproses kategori.', 'error');
+                            }
+                        } catch (error) {
+                            console.error('Error:', error);
+                            hideNotification(loadingNotif);
+                            showNotification(error.message || 'Terjadi kesalahan saat memproses kategori.', 'error');
+                        }
+                    });
+                }
                 
 
                 const openMenuModal = (mode, menuData = null, parentId = 0) => {
@@ -1484,8 +1673,8 @@
                     try {
                         const data = await fetchAPI(`/api/navigasi/all/${currentCategory}`);
                         sidebarElement.innerHTML = data.html;
-                        attachAdminEventListeners();
-                        initSidebarDropdown();
+                        attachAdminEventListeners(); // Re-attach listeners after content update
+                        initSidebarDropdown(); // Re-initialize dropdown logic
                     } catch (error) {
                         showNotification('Gagal memuat ulang sidebar.', 'error');
                         console.error('Kesalahan memuat ulang sidebar:', error);
@@ -1549,7 +1738,7 @@
                         const dataToSend = {};
                         formData.forEach((value, key) => {
                             if (key === 'menu_status') {
-                                dataToSend[key] = value === '1' ? 1 : 0;
+                                dataToSend[key] = value === '1' ? 1 : 0; // Ensure boolean is sent correctly
                             } else {
                                 dataToSend[key] = value;
                             }
@@ -1572,14 +1761,14 @@
                         try {
                             const data = await fetchAPI(url, options);
                             
-                            hideNotification(loadingNotif); 
+                            hideNotification(loadingNotif);    
                             showCentralSuccessPopup(data.success); // Use the new central success popup
                             
                             closeMenuModalAdmin();
                             refreshSidebar();
                         } catch (error) {
                             console.error('Kesalahan saat menyimpan menu:', error);
-                            hideNotification(loadingNotif); 
+                            hideNotification(loadingNotif);    
                             
                             if (error.message) {
                                 showNotification(`Gagal menyimpan: ${error.message}`, 'error');
@@ -1602,13 +1791,13 @@
                             try {
                                 const data = await fetchAPI(`/api/navigasi/${menuToDelete.id}`, { method: 'DELETE' });
                                 
-                                hideNotification(deleteLoadingNotif); 
+                                hideNotification(deleteLoadingNotif);    
                                 showCentralSuccessPopup(data.success); // Use the new central success popup
                                 
                                 closeDeleteConfirmModal();
                                 refreshSidebar();
                             } catch (error) {
-                                hideNotification(deleteLoadingNotif); 
+                                hideNotification(deleteLoadingNotif);    
                                 showNotification(`Gagal menghapus: ${error.message || 'Terjadi kesalahan'}`, 'error');
                                 console.error('Kesalahan menghapus menu:', error);
                                 closeDeleteConfirmModal();
@@ -1616,15 +1805,169 @@
                         }
                     });
                 }
+                
+                // New logic for deleting specific content type
+                if (deleteContentBtn) {
+                    deleteContentBtn.addEventListener('click', async () => {
+                        const menuId = '{{ $menu_id ?? 0 }}';
+                        const contentType = document.getElementById('editor-content-type').value;
 
-                attachAdminEventListeners(); 
+                        Swal.fire({
+                            title: 'Yakin ingin menghapus konten ini?',
+                            text: `Anda akan menghapus konten untuk "${contentType}".`,
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#d33',
+                            cancelButtonColor: '#3085d6',
+                            confirmButtonText: 'Ya, Hapus',
+                            cancelButtonText: 'Batal'
+                        }).then(async (result) => {
+                            if (result.isConfirmed) {
+                                const loadingNotif = showNotification('Menghapus konten...', 'loading');
+                                try {
+                                    const data = await fetchAPI(`/docs/delete/${menuId}`, {
+                                        method: 'DELETE',
+                                        body: JSON.stringify({ content_type: contentType })
+                                    });
+
+                                    hideNotification(loadingNotif);
+                                    if (data.success) {
+                                        showCentralSuccessPopup(data.success);
+                                        // Reload the page to reflect the content deletion and possibly show default content
+                                        window.location.reload();    
+                                    } else {
+                                        showNotification(data.error || 'Gagal menghapus konten.', 'error');
+                                    }
+                                } catch (error) {
+                                    hideNotification(loadingNotif);
+                                    showNotification(`Gagal menghapus konten: ${error.message || 'Terjadi kesalahan'}`, 'error');
+                                    console.error('Error deleting content:', error);
+                                }
+                            }
+                        });
+                    });
+                }
+
+
+                attachAdminEventListeners();            
             @endif
         @endauth
+
+        // Logic for content tabs (UAT, Pengkodean, Database)
+        const contentTabsContainer = document.getElementById('content-tabs');
+        const kontenView = document.getElementById('kontenView');
+        const editorContainer = document.getElementById('editor-container');
+        const editorForm = document.getElementById('editor-form');
+        const editorContentTypeInput = document.getElementById('editor-content-type');
+        const documentationContent = document.getElementById('documentation-content');
+        const cancelEditorBtn = document.getElementById('cancel-editor-btn'); // Get cancel button
+        
+        // This variable is passed from the server for all contents related to the current menu
+        const allDocsContents = @json($allDocsContents ?? []);    
+        // Get the initial content type that was displayed (from the URL query parameter)
+        const initialActiveContentType = new URLSearchParams(window.location.search).get('content_type') || 'Default';
+
+        if (contentTabsContainer) {
+            // Function to update content based on selected tab
+            const updateContentDisplay = (contentType) => {
+                const contentData = allDocsContents.find(doc => doc.title === contentType);
+                if (kontenView) {
+                    kontenView.innerHTML = contentData ? contentData.content : '<h3>Konten belum tersedia.</h3><p>Silakan edit untuk menambahkan konten untuk ' + contentType + '.</p>';
+                }
+                // Update the hidden input for the editor form
+                if (editorContentTypeInput) {
+                    editorContentTypeInput.value = contentType;
+                }
+                // Update URL without reloading
+                const url = new URL(window.location);
+                url.searchParams.set('content_type', contentType);
+                window.history.pushState({}, '', url);
+            };
+
+            // Add click listeners to tab buttons
+            contentTabsContainer.querySelectorAll('.tab-button').forEach(button => {
+                button.addEventListener('click', () => {
+                    // Remove 'active' class from all buttons
+                    contentTabsContainer.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                    // Add 'active' class to the clicked button
+                    button.classList.add('active');
+
+                    const contentType = button.dataset.contentType;
+                    updateContentDisplay(contentType);
+
+                    // If editor is open, update its content as well
+                    if (!editorContainer.classList.contains('hidden') && typeof currentEditorInstance !== 'undefined' && currentEditorInstance !== null) {
+                        const contentToLoad = allDocsContents.find(doc => doc.title === contentType)?.content || '# Belum ada konten untuk ' + contentType;
+                        currentEditorInstance.setData(contentToLoad);
+                    }
+                });
+            });
+
+            // Set the initial active tab based on query parameter or default to the first
+            let initialTabButton = contentTabsContainer.querySelector(`[data-content-type="${initialActiveContentType}"]`);
+            if (!initialTabButton && contentTabsContainer.children.length > 0) {
+                initialTabButton = contentTabsContainer.children[0];
+            }
+            if (initialTabButton) {
+                initialTabButton.classList.add('active');
+                updateContentDisplay(initialTabButton.dataset.contentType); // Ensure correct content is displayed initially
+            }
+        }
+
+
+        // Override the form submission to include content_type
+        if (editorForm) {
+            editorForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                if (!currentEditorInstance) {
+                    showNotification('Editor belum diinisialisasi.', 'error');
+                    return;
+                }
+
+                const loadingNotif = showNotification('Menyimpan konten...', 'loading');
+                const menuId = '{{ $menu_id ?? 0 }}';    
+                const content = currentEditorInstance.getData();
+                const currentCategoryForm = document.querySelector('input[name="currentCategoryFromForm"]').value;
+                const currentPageForm = document.querySelector('input[name="currentPageFromForm"]').value;
+                const contentType = document.getElementById('editor-content-type').value;    
+
+                try {
+                    const data = await fetchAPI(`/docs/save/${menuId}`, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            _token: csrfToken,    
+                            content: content,
+                            currentCategoryFromForm: currentCategoryForm,
+                            currentPageFromForm: currentPageForm,
+                            content_type: contentType    
+                        })
+                    });
+
+                    hideNotification(loadingNotif);
+                    showCentralSuccessPopup(data.success || 'Konten berhasil disimpan!');
+
+                    // After saving, reload allDocsContents to get the latest data
+                    // This is a simplified approach, a more robust solution might involve updating `allDocsContents` directly
+                    // and then calling `updateContentDisplay` with the new data. For now, a full reload is safer.
+                    window.location.reload();    
+
+                } catch (error) {
+                    console.error('Kesalahan saat menyimpan konten:', error);
+                    hideNotification(loadingNotif);
+                    showNotification(`Gagal menyimpan konten: ${error.message || 'Terjadi kesalahan'}`, 'error');
+                }
+            });
+        }
+        
+        if (cancelEditorBtn) {
+            cancelEditorBtn.addEventListener('click', closeEditor);
+        }
 
     });
 
         // Responsive Side Menu
-    
+        
     const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
     const sidebarElement = document.querySelector('aside');
     const backdrop = document.getElementById('sidebar-backdrop');

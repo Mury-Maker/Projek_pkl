@@ -1,6 +1,6 @@
 <?php
 // File: app/Models/DocsContent.php
-// PERBAIKAN: Menambahkan 'menu_id' ke $fillable
+// PERBAIKAN: Menambahkan 'title' ke $fillable
 
 namespace App\Models;
 
@@ -20,6 +20,7 @@ class DocsContent extends Model
     protected $fillable = [
         'content',
         'menu_id',
+        'title', // Tambahkan ini
     ];
 
     /**
