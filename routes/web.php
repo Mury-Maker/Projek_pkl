@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Auth;
 Route::get('/', function () {
     if (Auth::check()) {
         // If logged in, redirect to default documentation page
-        return redirect()->route('docs'); // Changed to just 'docs'
+        return redirect()->route('docs.index'); // Changed to just 'docs'
     }
     // If not logged in, redirect to login page
     return redirect()->route('login');
