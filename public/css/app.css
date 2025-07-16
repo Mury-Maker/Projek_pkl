@@ -1,0 +1,557 @@
+/* public/css/app.css */
+
+body {
+    font-family: 'Inter', sans-serif;
+}
+.prose h1 {
+    @apply text-3xl font-bold mb-4 text-gray-800;
+}
+.prose h2 {
+    @apply text-2xl font-bold mb-3 text-gray-700;
+}
+.prose p {
+    @apply text-gray-700 leading-relaxed mb-4;
+}
+.prose a {
+    @apply text-blue-600 hover:underline;
+}
+.prose code:not(pre code) {
+    @apply bg-gray-200 text-red-600 rounded px-1 py-0.5 text-sm;
+}
+.prose pre {
+    @apply bg-gray-800 text-white rounded-lg p-4 overflow-x-auto;
+}
+.prose ul {
+    @apply list-disc list-inside mb-4;
+}
+.prose ol {
+    @apply list-decimal list-inside mb-4;
+}
+
+/* Notifikasi Pop-up */
+.notification-message {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) translateY(-20px);
+    padding: 1rem 2rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    z-index: 5000;
+    opacity: 0;
+    transition: all 0.3s ease-out;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    min-width: 250px;
+    max-width: 90%;
+}
+.notification-message.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) translateY(0);
+}
+.notification-message.success {
+    background-color: #d1fae5;
+    color: #065f46;
+    border: 1px solid #34d399;
+}
+.notification-message.error {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #ef4444;
+}
+
+/* CSS untuk Notifikasi Loading */
+.notification-message.loading {
+    background-color: #e0f2fe; /* Light blue background */
+    color: #0c4a6e; /* Darker blue text */
+    border: 1px solid #60a5fa; /* Blue border */
+}
+
+.notification-message .notification-icon {
+    margin-right: 0.75rem;
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+/* CSS untuk efek spinner loading */
+.notification-icon.fa-spin {
+    animation: fa-spin 1s infinite linear;
+}
+
+@keyframes fa-spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Modal asli untuk Add/Edit Menu */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 4000;
+    visibility: hidden;
+    opacity: 0;
+    transition: visibility 0s, opacity 0.3s;
+}
+.modal.show {
+    visibility: visible;
+    opacity: 1;
+}
+.modal-content {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+    width: 90%;
+    max-width: 600px;
+    transform: translateY(-50px);
+    transition: transform 0.3s ease-out;
+}
+.modal.show .modal-content {
+    transform: translateY(0);
+}
+
+/* CSS for the new central success popup */
+.modal-content.central-popup-content {
+    max-width: 400px; /* Lebar maksimum seperti gambar */
+    padding: 2rem; /* Sesuaikan padding */
+    text-align: center;
+    /* Pastikan transisi untuk muncul/hilang halus */
+    transform: translateY(-50px);
+    transition: transform 0.3s ease-out;
+}
+/* Style when the modal is shown */
+#central-success-popup.show .central-popup-content {
+    transform: translateY(0);
+}
+/* Tambahan: Pastikan background modal transparan untuk pop-up ini */
+#central-success-popup {
+    background-color: rgba(0, 0, 0, 0.2); /* Sedikit transparan agar konten di belakang masih terlihat samar */
+}
+/* Style untuk teks "Berhasil!" */
+.central-popup-content h3 {
+    font-size: 2rem; /* Menyesuaikan ukuran font dengan screenshot */
+    font-weight: 700; /* Font bold */
+    color: #2d3748; /* Warna teks gray-800 */
+}
+/* Style untuk pesan di bawah "Berhasil!" */
+.central-popup-content p {
+    font-size: 1.125rem; /* Ukuran font lebih besar dari default p */
+    color: #4a5568; /* Warna teks gray-700 */
+}
+
+/* CSS untuk Search Overlay/Modal BARU */
+#search-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7); /* Overlay gelap */
+    display: flex;
+    justify-content: center;
+    align-items: flex-start; /* Mulai dari atas */
+    padding-top: 5rem; /* Jarak dari atas */
+    z-index: 5000; /* Pastikan di atas semua */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+#search-overlay.open {
+    opacity: 1;
+    visibility: visible;
+}
+#search-modal-content {
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
+    width: 90%;
+    max-width: 650px; /* Lebar maksimum seperti gambar */
+    transform: translateY(-20px);
+    transition: transform 0.3s ease-out;
+}
+#search-overlay.open #search-modal-content {
+    transform: translateY(0);
+}
+#search-input-container {
+    border-bottom: 1px solid #e2e8f0; /* border-b-gray-200 */
+}
+#search-results-list {
+    max-height: 400px; /* Tinggi maksimum untuk daftar hasil */
+    overflow-y: auto;
+    padding: 1rem 0;
+}
+#search-results-list a {
+    display: block;
+    padding: 0.75rem 1.5rem;
+    color: #4a5568; /* text-gray-700 */
+}
+#search-results-list a:hover {
+    background-color: #edf2f7; /* bg-gray-100 */
+}
+.search-result-category {
+    font-size: 0.875rem; /* text-sm */
+    font-weight: 600; /* font-semibold */
+    color: #2d3748; /* text-gray-800 */
+    padding: 0.5rem 1.5rem;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+.search-result-item .search-title {
+    font-weight: 500; /* font-medium */
+    color: #2c5282; /* text-blue-800 */
+}
+.search-result-item .search-context {
+    font-size: 0.875rem; /* text-sm */
+    color: #718096; /* text-gray-600 */
+    margin-top: 0.25rem;
+}
+
+.buttons {
+    min-width: 100%;
+    margin: 10px;
+    display: flex;
+    padding: 10px;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.btn {
+    padding: 12px;
+    border-radius: 8px;
+}
+.btn-simpan {
+    background-color: #45a65a;
+    color: white;
+}
+.btn-batal {
+    background-color: #00c0ef;
+    color: white;
+}
+.btn-hapus {
+    background-color: red;
+    color: white;
+}
+.judul-halaman {
+    margin: 10px 10px 10px 0;
+    display: flex;
+    gap: 12px;
+}
+.judul-halaman h1 {
+    font-size: 26px;
+}
+
+/* CSS untuk Dropdown Sidebar */
+.submenu-container {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease-in-out;
+}
+.submenu-container.open {
+    max-height: 1000px; /* Nilai besar untuk menampung semua submenu */
+}
+/* PERBAIKAN: Target kelas 'open' pada elemen <i> di dalam .menu-arrow-icon */
+.menu-arrow-icon i.open {
+    transform: rotate(-90deg); /* Dari kiri ke bawah */
+}
+
+/* Menambahkan CSS untuk memastikan tinggi item menu yang seragam */
+.sidebar-menu-item-wrapper {
+    /* Pastikan elemen ini memiliki tinggi yang konsisten */
+    min-height: 40px; /* Contoh tinggi minimum yang sama untuk semua item */
+    display: flex; /* Gunakan flexbox untuk alignment yang lebih baik */
+    align-items: center; /* Pusatkan secara vertikal */
+}
+.header-content-wrapper {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.header-spacer-left,
+.header-spacer-right {
+    flex-grow: 1; /* Coba kembali ke flex-grow: 1, karena kita akan memberi flex-grow ke bagian search */
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+
+.header-spacer-left {
+    justify-content: flex-start;
+}
+.header-spacer-right {
+    justify-content: flex-end;
+}
+
+/* Tambahkan kelas baru untuk kontainer tombol search */
+.search-button-wrapper {
+    flex-grow: 1; /* **PERUBAHAN PENTING: Beri flex-grow: 1 pada wrapper search** */
+    display: flex; /* Jadikan flex container untuk memusatkan tombol di dalamnya */
+    justify-content: center; /* Pusatkan tombol search di dalam wrappernya */
+    align-items: center;
+    min-width: 0; /* Pastikan bisa menyusut jika perlu */
+}
+/* CSS for the new delete confirmation modal */
+#delete-confirm-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 6000; /* Higher than other modals */
+    visibility: hidden;
+    opacity: 0;
+    transition: visibility 0s, opacity 0.3s;
+}
+#delete-confirm-modal.show {
+    visibility: visible;
+    opacity: 1;
+}
+#delete-confirm-modal-content {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+    width: 90%;
+    max-width: 450px;
+    text-align: center;
+    transform: translateY(-50px);
+    transition: transform 0.3s ease-out;
+}
+#delete-confirm-modal.show #delete-confirm-modal-content {
+    transform: translateY(0);
+}
+
+/* Dropdown untuk Kategori di Header */
+.header-dropdown-menu {
+    display: none;
+    position: absolute;
+    background-color: white; /* Warna latar belakang putih */
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    top: 100%; /* Posisi di bawah tombol induk */
+    left: 0;
+    margin-top: 0.5rem;
+    border: 1px solid #4a5568; /* Garis luar gelap (warna gray-700 dari Tailwind) */
+}
+
+.header-dropdown-menu.open {
+    display: block;
+}
+
+.header-dropdown-menu a {
+    color: black;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    text-align: left;
+}
+
+.header-dropdown-menu a:hover {
+    background-color: #f1f1f1;
+}
+
+/* Kustomisasi untuk tombol dropdown Kategori */
+#category-dropdown-btn {
+    background: linear-gradient(135deg, #4f46e5, #3b82f6); /* ungu ke biru */
+    color: #fff;
+    border: none;
+    font-weight: 600;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+#category-dropdown-btn:hover {
+    background: linear-gradient(135deg, #6366f1, #60a5fa);
+    transform: translateY(-1px);
+}
+
+/* Dropdown menu */
+#category-dropdown-menu {
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    padding: 4px 0;
+}
+
+/* Link dalam dropdown */
+#category-dropdown-menu a {
+    padding: 10px 16px;
+    display: block;
+    font-size: 14px;
+    color: #4b5563;
+    text-decoration: none;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    position: relative;
+}
+
+#category-dropdown-menu a:hover {
+    background-color: #f3f4f6;
+    color: #111827;
+}
+
+#category-dropdown-btn .fa-chevron-down,
+#category-dropdown-btn .fa-chevron-up {
+    margin-left: 8px; /* Jarak antara teks dan ikon */
+    font-size: 0.75rem; /* Ukuran ikon lebih kecil */
+    transition: transform 0.2s ease-in-out;
+}
+
+/* Aktif state */
+#category-dropdown-menu a.bg-gray-100 {
+    background-color: #e0f2fe !important;
+    color: #1d4ed8 !important;
+    font-weight: 600;
+}
+
+/* Tambahan efek garis warna samping aktif */
+#category-dropdown-menu a.bg-gray-100::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 4px;
+    height: 100%;
+    background-color: #3b82f6;
+    border-top-left-radius: 10px;
+    border-bottom-left-radius: 10px;
+}
+
+.hidden {
+    display: none;
+}
+
+#editBtn:hover {
+    color: blue;
+}
+/* Tombol Logout */
+.logout-btn {
+    background-color: #ef4444; /* merah */
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.logout-btn:hover {
+    background-color: #dc2626; /* merah lebih gelap saat hover */
+    transform: translateY(-1px);
+}
+
+/* Responsif tambahan opsional */
+@media (max-width: 640px) {
+    .header-spacer-right {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    aside {
+        position: fixed;
+        top: 4rem; /* tinggi header */
+        left: 0;
+        height: calc(100% - 4rem);
+        background: white;
+        z-index: 40;
+        width: 16rem; /* 256px */
+        transform: translateX(-100%);
+        transition: transform 0.3s ease-in-out;
+    }
+    aside.show {
+        transform: translateX(0);
+    }
+    .backdrop {
+        display: none;
+    }
+    .backdrop.show {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background-color: rgba(0, 0, 0, 0.4);
+        z-index: 30;
+    }
+
+    .search-button-wrapper {
+        max-width: auto;
+        justify-content: flex-end;
+        align-content: flex-end;
+        align-items: flex-end;
+    }
+
+    .text-search {
+        display: none;
+        max-width: 0;
+    }
+
+    .page-sidebar {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 18px;
+    }
+
+    .page-title {
+        display: flex;
+    }
+
+    .title-page {
+        display: none;
+    }
+    #search-icon {
+        background-color: none;
+        flex-grow: 1;
+    }
+    #open-search-modal-btn-header {
+        align-items: center;
+        display: block;
+    }
+}
+/* Styles for content tabs */
+.content-tabs {
+    display: flex;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.content-tabs button {
+    padding: 0.75rem 1rem;
+    border: none;
+    background-color: transparent;
+    cursor: pointer;
+    font-weight: 500;
+    color: #6b7280; /* gray-500 */
+    transition: all 0.2s ease-in-out;
+    position: relative;
+    outline: none;
+}
+
+.content-tabs button:hover {
+    color: #1f2937; /* gray-800 */
+}
+
+.content-tabs button.active {
+    color: #3b82f6; /* blue-500 */
+    border-bottom: 2px solid #3b82f6;
+}

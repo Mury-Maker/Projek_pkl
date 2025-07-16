@@ -10,6 +10,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://kit.fontawesome.com/f898b05a2e.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+
     
     {{-- CKEditor CSS hanya dimuat jika user adalah admin --}}
     @auth
@@ -18,484 +20,6 @@
             <link rel="stylesheet" href="https://cdn.ckeditor.com/ckeditor5/45.2.1/ckeditor5.css" crossorigin>
         @endif
     @endauth
-
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-        .prose h1 { @apply text-3xl font-bold mb-4 text-gray-800; }
-        .prose h2 { @apply text-2xl font-bold mb-3 text-gray-700; }
-        .prose p { @apply text-gray-700 leading-relaxed mb-4; }
-        .prose a { @apply text-blue-600 hover:underline; }
-        .prose code:not(pre code) { @apply bg-gray-200 text-red-600 rounded px-1 py-0.5 text-sm; }
-        .prose pre { @apply bg-gray-800 text-white rounded-lg p-4 overflow-x-auto; }
-        .prose ul { @apply list-disc list-inside mb-4; }
-        .prose ol { @apply list-decimal list-inside mb-4; }
-
-        /* Notifikasi Pop-up */
-        .notification-message {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) translateY(-20px);
-            padding: 1rem 2rem;
-            border-radius: 0.5rem;
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-            z-index: 5000;
-            opacity: 0;
-            transition: all 0.3s ease-out;
-            font-size: 1rem;
-            display: flex;
-            align-items: center;
-            min-width: 250px;
-            max-width: 90%;
-        }
-        .notification-message.show {
-            opacity: 1;
-            transform: translate(-50%, -50%) translateY(0);
-        }
-        .notification-message.success { background-color: #d1fae5; color: #065f46; border: 1px solid #34d399; }
-        .notification-message.error { background-color: #fee2e2; color: #991b1b; border: 1px solid #ef4444; }
-
-        /* CSS untuk Notifikasi Loading */
-        .notification-message.loading {
-            background-color: #e0f2fe; /* Light blue background */
-            color: #0c4a6e; /* Darker blue text */
-            border: 1px solid #60a5fa; /* Blue border */
-        }
-
-        .notification-message .notification-icon {
-            margin-right: 0.75rem;
-            font-size: 1.5rem;
-            line-height: 1;
-        }
-
-        /* CSS untuk efek spinner loading */
-        .notification-icon.fa-spin {
-            animation: fa-spin 1s infinite linear;
-        }
-
-        @keyframes fa-spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Modal asli untuk Add/Edit Menu */
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 4000; visibility: hidden; opacity: 0; transition: visibility 0s, opacity 0.3s; }
-        .modal.show { visibility: visible; opacity: 1; }
-        .modal-content { background-color: white; padding: 2rem; border-radius: 0.5rem; box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1); width: 90%; max-width: 600px; transform: translateY(-50px); transition: transform 0.3s ease-out; }
-        .modal.show .modal-content { transform: translateY(0); }
-        
-        /* CSS for the new central success popup */
-        .modal-content.central-popup-content {
-            max-width: 400px; /* Lebar maksimum seperti gambar */
-            padding: 2rem; /* Sesuaikan padding */
-            text-align: center;
-            /* Pastikan transisi untuk muncul/hilang halus */
-            transform: translateY(-50px);
-            transition: transform 0.3s ease-out;
-        }
-        /* Style when the modal is shown */
-        #central-success-popup.show .central-popup-content {
-            transform: translateY(0);
-        }
-        /* Tambahan: Pastikan background modal transparan untuk pop-up ini */
-        #central-success-popup {
-            background-color: rgba(0, 0, 0, 0.2); /* Sedikit transparan agar konten di belakang masih terlihat samar */
-        }
-        /* Style untuk teks "Berhasil!" */
-        .central-popup-content h3 {
-            font-size: 2rem; /* Menyesuaikan ukuran font dengan screenshot */
-            font-weight: 700; /* Font bold */
-            color: #2d3748; /* Warna teks gray-800 */
-        }
-        /* Style untuk pesan di bawah "Berhasil!" */
-        .central-popup-content p {
-            font-size: 1.125rem; /* Ukuran font lebih besar dari default p */
-            color: #4a5568; /* Warna teks gray-700 */
-        }
-
-        /* CSS untuk Search Overlay/Modal BARU */
-        #search-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7); /* Overlay gelap */
-            display: flex;
-            justify-content: center;
-            align-items: flex-start; /* Mulai dari atas */
-            padding-top: 5rem; /* Jarak dari atas */
-            z-index: 5000; /* Pastikan di atas semua */
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease, visibility 0.3s ease;
-        }
-        #search-overlay.open {
-            opacity: 1;
-            visibility: visible;
-        }
-        #search-modal-content {
-            background-color: white;
-            border-radius: 0.5rem;
-            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
-            width: 90%;
-            max-width: 650px; /* Lebar maksimum seperti gambar */
-            transform: translateY(-20px);
-            transition: transform 0.3s ease-out;
-        }
-        #search-overlay.open #search-modal-content {
-            transform: translateY(0);
-        }
-        #search-input-container {
-            border-bottom: 1px solid #e2e8f0; /* border-b-gray-200 */
-        }
-        #search-results-list {
-            max-height: 400px; /* Tinggi maksimum untuk daftar hasil */
-            overflow-y: auto;
-            padding: 1rem 0;
-        }
-        #search-results-list a {
-            display: block;
-            padding: 0.75rem 1.5rem;
-            color: #4a5568; /* text-gray-700 */
-        }
-        #search-results-list a:hover {
-            background-color: #edf2f7; /* bg-gray-100 */
-        }
-        .search-result-category {
-            font-size: 0.875rem; /* text-sm */
-            font-weight: 600; /* font-semibold */
-            color: #2d3748; /* text-gray-800 */
-            padding: 0.5rem 1.5rem;
-            margin-top: 1rem;
-            margin-bottom: 0.5rem;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        .search-result-item .search-title {
-            font-weight: 500; /* font-medium */
-            color: #2c5282; /* text-blue-800 */
-        }
-        .search-result-item .search-context {
-            font-size: 0.875rem; /* text-sm */
-            color: #718096; /* text-gray-600 */
-            margin-top: 0.25rem;
-        }
-
-        .buttons{ min-width: 100%; margin: 10px; display: flex; padding: 10px; gap: 12px; flex-wrap: wrap; justify-content: center; }
-        .btn{ padding: 12px; border-radius: 8px; }
-        .btn-simpan{ background-color: #45a65a; color: white; }
-        .btn-batal{ background-color: #00c0ef; color: white; }
-        .btn-hapus{ background-color: red; color: white; }
-        .judul-halaman{ 
-            margin: 10px 10px 10px 0; 
-            display: flex;
-            gap: 12px;
-        }
-        .judul-halaman h1{ font-size: 26px }
-
-        /* CSS untuk Dropdown Sidebar */
-        .submenu-container {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.4s ease-in-out;
-        }
-        .submenu-container.open {
-            max-height: 1000px; /* Nilai besar untuk menampung semua submenu */
-        }
-        /* PERBAIKAN: Target kelas 'open' pada elemen <i> di dalam .menu-arrow-icon */
-        .menu-arrow-icon i.open {
-            transform: rotate(-90deg); /* Dari kiri ke bawah */
-        }
-
-        /* Menambahkan CSS untuk memastikan tinggi item menu yang seragam */
-        .sidebar-menu-item-wrapper {
-            /* Pastikan elemen ini memiliki tinggi yang konsisten */
-            min-height: 40px; /* Contoh tinggi minimum yang sama untuk semua item */
-            display: flex; /* Gunakan flexbox untuk alignment yang lebih baik */
-            align-items: center; /* Pusatkan secara vertikal */
-        }
-        .header-content-wrapper {
-            display: flex;
-            align-items: center;
-            width: 100%;
-        }
-
-        .header-spacer-left,
-        .header-spacer-right {
-            flex-grow: 1; /* Coba kembali ke flex-grow: 1, karena kita akan memberi flex-grow ke bagian search */
-            display: flex;
-            align-items: center;
-            min-width: 0; 
-        }
-
-        .header-spacer-left {
-            justify-content: flex-start;
-        }
-        .header-spacer-right {
-            justify-content: flex-end;
-        }
-
-        /* Tambahkan kelas baru untuk kontainer tombol search */
-        .search-button-wrapper {
-            flex-grow: 1; /* **PERUBAHAN PENTING: Beri flex-grow: 1 pada wrapper search** */
-            display: flex; /* Jadikan flex container untuk memusatkan tombol di dalamnya */
-            justify-content: center; /* Pusatkan tombol search di dalam wrappernya */
-            align-items: center;
-            min-width: 0; /* Pastikan bisa menyusut jika perlu */
-        }
-        /* CSS for the new delete confirmation modal */
-        #delete-confirm-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 6000; /* Higher than other modals */
-            visibility: hidden;
-            opacity: 0;
-            transition: visibility 0s, opacity 0.3s;
-        }
-        #delete-confirm-modal.show {
-            visibility: visible;
-            opacity: 1;
-        }
-        #delete-confirm-modal-content {
-            background-color: white;
-            padding: 2rem;
-            border-radius: 0.5rem;
-            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
-            width: 90%;
-            max-width: 450px;
-            text-align: center;
-            transform: translateY(-50px);
-            transition: transform 0.3s ease-out;
-        }
-        #delete-confirm-modal.show #delete-confirm-modal-content {
-            transform: translateY(0);
-        }
-
-        /* Dropdown untuk Kategori di Header */
-        .header-dropdown-menu {
-            display: none;
-            position: absolute;
-            background-color: white; /* Warna latar belakang putih */
-            min-width: 160px;
-            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-            z-index: 1;
-            border-radius: 0.5rem;
-            overflow: hidden;
-            top: 100%; /* Posisi di bawah tombol induk */
-            left: 0;
-            margin-top: 0.5rem;
-            border: 1px solid #4a5568; /* Garis luar gelap (warna gray-700 dari Tailwind) */
-        }
-
-        .header-dropdown-menu.open {
-            display: block;
-        }
-
-        .header-dropdown-menu a {
-            color: black;
-            padding: 12px 16px;
-            text-decoration: none;
-            display: block;
-            text-align: left;
-        }
-
-        .header-dropdown-menu a:hover {
-            background-color: #f1f1f1;
-        }
-
-        /* Kustomisasi untuk tombol dropdown Kategori */
-        #category-dropdown-btn {
-            background: linear-gradient(135deg, #4f46e5, #3b82f6); /* ungu ke biru */
-            color: #fff;
-            border: none;
-            font-weight: 600;
-            transition: background-color 0.3s ease, transform 0.2s ease;
-        }
-
-        #category-dropdown-btn:hover {
-            background: linear-gradient(135deg, #6366f1, #60a5fa);
-            transform: translateY(-1px);
-        }
-
-        /* Dropdown menu */
-        #category-dropdown-menu {
-            background-color: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-            padding: 4px 0;
-        }
-
-        /* Link dalam dropdown */
-        #category-dropdown-menu a {
-            padding: 10px 16px;
-            display: block;
-            font-size: 14px;
-            color: #4b5563;
-            text-decoration: none;
-            transition: background-color 0.2s ease, color 0.2s ease;
-            position: relative;
-        }
-
-        #category-dropdown-menu a:hover {
-            background-color: #f3f4f6;
-            color: #111827;
-        }
-
-        #category-dropdown-btn .fa-chevron-down,
-        #category-dropdown-btn .fa-chevron-up {
-            margin-left: 8px; /* Jarak antara teks dan ikon */
-            font-size: 0.75rem; /* Ukuran ikon lebih kecil */
-            transition: transform 0.2s ease-in-out;
-        }
-
-        /* Aktif state */
-        #category-dropdown-menu a.bg-gray-100 {
-            background-color: #e0f2fe !important;
-            color: #1d4ed8 !important;
-            font-weight: 600;
-        }
-
-        /* Tambahan efek garis warna samping aktif */
-        #category-dropdown-menu a.bg-gray-100::before {
-            content: "";
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 4px;
-            height: 100%;
-            background-color: #3b82f6;
-            border-top-left-radius: 10px;
-            border-bottom-left-radius: 10px;
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        #editBtn:hover{
-            color: blue;
-        }
-        /* Tombol Logout */
-        .logout-btn {
-            background-color: #ef4444; /* merah */
-            color: #fff;
-            font-size: 14px;
-            font-weight: 600;
-            padding: 8px 14px;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            transition: background-color 0.3s ease, transform 0.2s ease;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .logout-btn:hover {
-            background-color: #dc2626; /* merah lebih gelap saat hover */
-            transform: translateY(-1px);
-        }
-
-        /* Responsif tambahan opsional */
-        @media (max-width: 640px) {
-            .header-spacer-right {
-                flex-direction: column;
-                gap: 8px;
-            }
-
-            aside {
-                position: fixed;
-                top: 4rem; /* tinggi header */
-                left: 0;
-                height: calc(100% - 4rem);
-                background: white;
-                z-index: 40;
-                width: 16rem; /* 256px */
-                transform: translateX(-100%);
-                transition: transform 0.3s ease-in-out;
-            }
-            aside.show {
-                transform: translateX(0);
-            }
-            .backdrop {
-                display: none;
-            }
-            .backdrop.show {
-                display: block;
-                position: fixed;
-                inset: 0;
-                background-color: rgba(0, 0, 0, 0.4);
-                z-index: 30;
-            }
-
-            .search-button-wrapper {
-                max-width: auto ;
-                justify-content: flex-end;
-                align-content: flex-end;
-                align-items: flex-end;
-            }
-            
-            .text-search{
-                display: none;
-                max-width: 0;
-            }
-
-            .page-sidebar{
-            display: flex;
-            flex-direction: column;
-            margin-bottom: 18px;
-            }
-
-            .page-title{
-            display: flex;
-            }
-
-            .title-page{
-                display: none;
-            }
-            #search-icon{
-                background-color: none;
-                flex-grow: 1;
-            }
-            #open-search-modal-btn-header{
-                align-items: center;
-                display:block;
-            }
-        }
-        /* Styles for content tabs */
-        .content-tabs {
-            display: flex;
-            margin-bottom: 1rem;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        .content-tabs button {
-            padding: 0.75rem 1rem;
-            border: none;
-            background-color: transparent;
-            cursor: pointer;
-            font-weight: 500;
-            color: #6b7280; /* gray-500 */
-            transition: all 0.2s ease-in-out;
-            position: relative;
-            outline: none;
-        }
-
-        .content-tabs button:hover {
-            color: #1f2937; /* gray-800 */
-        }
-
-        .content-tabs button.active {
-            color: #3b82f6; /* blue-500 */
-            border-bottom: 2px solid #3b82f6;
-        }
-    </style>
 </head>
 <body class="bg-gray-100">
     <div class="flex h-screen flex-col">
@@ -883,125 +407,283 @@
     @endauth
 
     <script>
-        let currentEditorInstance; // Deklarasikan variabel global untuk instance CKEditor
+    // =================================
+    // VARIABEL & FUNGSI UTILITAS GLOBAL
+    // =================================
+    // Variabel untuk token CSRF, dapat diakses secara global
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-        function openEditor() {
-            const kontenView = document.getElementById('kontenView');
-            const editorContainer = document.getElementById('editor-container');
-            const editorContentTypeInput = document.getElementById('editor-content-type');
-            const editBtn = document.getElementById('editBtn'); // Get the edit button
+    // Variabel global untuk instance CKEditor
+    let currentEditorInstance;
 
-            // Hide the view and show the editor
-            kontenView.classList.add('hidden');
-            editorContainer.classList.remove('hidden');
-            if (editBtn) {
-                editBtn.classList.add('hidden'); // Hide the edit button when editor is open
-            }
-
-            // Set content for the editor based on the active tab, or default
-            const activeTabButton = document.querySelector('.content-tabs button.active');
-            let contentType = 'Default'; // Default value if no tabs or no active tab
-            if (activeTabButton) {
-                contentType = activeTabButton.dataset.contentType;
-            }
-            editorContentTypeInput.value = contentType; // Update hidden input for form submission
-
-            // Find content matching the active tab's content type
-            const allDocsContents = @json($allDocsContents ?? []);
-            const currentContent = allDocsContents.find(doc => doc.title === contentType);
-            const contentToLoad = currentContent ? currentContent.content : '# Belum ada konten untuk ' + contentType;
-
-            // Check if ClassicEditor is defined (from ckeditor5.umd.js)
-            if (typeof ClassicEditor === 'undefined') {
-                showNotification('Pustaka CKEditor tidak dimuat. Periksa konsol browser untuk kesalahan.', 'error', 5000);
-                console.error('ClassicEditor tidak terdefinisi. Pastikan skrip CKEditor UMD dimuat dengan benar.');
-                return;
-            }
-
-            // Initialize CKEditor if not initialized, or just set data if already exists
-            if (!currentEditorInstance) {
-                const editorConfigFromMainJS = window.CKEDITOR_CONFIG || {}; // Use a more specific global variable name
-
-                const finalEditorConfig = {
-                    ...editorConfigFromMainJS, // Merge config from main.js
-                    ckfinder: {
-                        uploadUrl: '{{ route('ckeditor.upload') . '?_token=' . csrf_token() }}'
-                    },
-                    simpleUpload: { // Ensure SimpleUploadAdapter is configured
-                        uploadUrl: '{{ route('ckeditor.upload') . '?_token=' . csrf_token() }}'
-                    },
-                    // Ensure plugins and toolbar are also merged if your main.js sets them
-                    plugins: [...(editorConfigFromMainJS.plugins || []), SimpleUploadAdapter].filter((v, i, a) => a.indexOf(v) === i), // Avoid plugin duplication
-                    toolbar: editorConfigFromMainJS.toolbar // Use toolbar from main.js
-                };
-
-                // Add a slight delay to ensure textarea is fully rendered and visible
-                setTimeout(() => {
-                    ClassicEditor
-                        .create(document.querySelector('#editor'), finalEditorConfig)
-                        .then(editor => {
-                            currentEditorInstance = editor;
-                            editor.setData(contentToLoad); // Set content fetched from the server
-                        })
-                        .catch(error => {
-                            console.error('Kesalahan saat menginisialisasi CKEditor:', error);
-                            showNotification('Gagal menginisialisasi editor. Detail: ' + error.message, 'error', 5000);
-                        });
-                }, 50); // Small delay, e.g., 50ms
-            } else {
-                currentEditorInstance.setData(contentToLoad); // Just set data if editor is already initialized
-            }
+    // Fungsi untuk menampilkan notifikasi toast
+    function showNotification(message, type = 'success', duration = 3000) {
+        const container = document.getElementById('notification-container');
+        if (!container) {
+            console.error('Notification container not found!');
+            return;
         }
 
-        function closeEditor() {
-            const kontenView = document.getElementById('kontenView');
-            const editorContainer = document.getElementById('editor-container');
-            const editBtn = document.getElementById('editBtn'); // Get the edit button
+        const notifId = 'notif-' + Date.now();
+        const notifDiv = document.createElement('div');
+        notifDiv.id = notifId;
+        notifDiv.className = `notification-message ${type}`;
 
-            editorContainer.classList.add('hidden');
-            kontenView.classList.remove('hidden');
-            if (editBtn) {
-                editBtn.classList.remove('hidden'); // Show the edit button when editor is closed
-            }
+        let iconClass = '';
+        let timeoutDuration = duration;
+        let delayBeforeShow = 0;
+
+        if (type === 'success') {
+            iconClass = 'fa-solid fa-check-circle text-green-700';
+        } else if (type === 'error') {
+            iconClass = 'fa-solid fa-times-circle text-red-700';
+        } else if (type === 'loading') {
+            iconClass = 'fa-solid fa-spinner fa-spin text-blue-700';
+            timeoutDuration = 0; // Loading notification won't auto-hide
+            delayBeforeShow = 500; // Add 0.5 sec delay for loading notification
         }
 
+        notifDiv.innerHTML = `<i class="notification-icon ${iconClass}"></i> ${message}`;
+        
+        const showTimeoutId = setTimeout(() => {
+            container.appendChild(notifDiv);
+            setTimeout(() => notifDiv.classList.add('show'), 10);
+        }, delayBeforeShow);
+
+        if (timeoutDuration > 0) {
+            setTimeout(() => {
+                notifDiv.classList.remove('show');
+                setTimeout(() => notifDiv.remove(), 500);
+            }, timeoutDuration + delayBeforeShow);
+        }
+
+        return { notifId: notifId, showTimeoutId: showTimeoutId, element: notifDiv };
+    }
+
+    // Fungsi untuk menyembunyikan notifikasi
+    function hideNotification(notifInfo) {
+        let notifElement;
+        let showTimeoutId;
+
+        if (typeof notifInfo === 'string') {
+            notifElement = document.getElementById(notifInfo);
+        } else if (typeof notifInfo === 'object' && notifInfo !== null) {
+            notifElement = notifInfo.element;
+            showTimeoutId = notifInfo.showTimeoutId;
+        }
+
+        if (showTimeoutId) {
+            clearTimeout(showTimeoutId);
+        }
+        
+        if (notifElement && notifElement.parentNode) {
+            notifElement.classList.remove('show');
+            setTimeout(() => notifElement.remove(), 500);
+        }
+    }
+
+    // Fungsi untuk melakukan permintaan Fetch API
+    async function fetchAPI(url, options = {}) {
+        const defaultHeaders = {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': csrfToken,
+            'Accept': 'application/json',
+        };
+        options.headers = { ...defaultHeaders, ...options.headers };
+
+        try {
+            const response = await fetch(url, options);
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `Kesalahan HTTP! status: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Kesalahan Fetch API:', error);
+            throw error;
+        }
+    }
+
+    // Fungsi untuk menampilkan pop-up sukses di tengah layar
+    function showCentralSuccessPopup(message) {
+        const centralSuccessPopup = document.getElementById('central-success-popup');
+        const centralPopupMessage = document.getElementById('central-popup-message');
+
+        if (centralPopupMessage) {
+            centralPopupMessage.textContent = message;
+        }
+        if (centralSuccessPopup) {
+            centralSuccessPopup.classList.add('show');
+            setTimeout(() => {
+                centralSuccessPopup.classList.remove('show');
+            }, 1000);
+        }
+    }
+
+    // Fungsi untuk membuka modal kategori (dipanggil via onclick)
+    function openCategoryModal(mode = 'create', defaultName = '') {
         const categoryModal = document.getElementById('categoryModal');
         const categoryForm = document.getElementById('categoryForm');
         const categoryModalTitle = document.getElementById('categoryModalTitle');
 
-        const cancelCategoryFormBtn = document.querySelector('#categoryModal button[onclick="closeCategoryModal()"]');
+        if (!categoryForm || !categoryModalTitle) {
+            showNotification('Form kategori tidak ditemukan!', 'error'); // Menggunakan notifikasi global
+            return;
+        }
 
-        // Remove any code that disables the 'cancelCategoryFormBtn' within this function
-        function openCategoryModal(mode = 'create', originalSlug = '', displayName = '') {
+        categoryForm.reset();
+        document.getElementById('form_category_method').value = mode === 'edit' ? 'PUT' : 'POST';
+        document.getElementById('form_category_nama').value = defaultName;
+
+        categoryModalTitle.textContent = mode === 'edit' ? 'Edit Kategori' : 'Tambah Kategori';
+        categoryModal.classList.remove('hidden');
+    }
+
+    // Fungsi untuk menutup modal kategori (dipanggil via onclick)
+    function closeCategoryModal() {
+        const categoryModal = document.getElementById('categoryModal');
+        if (categoryModal) { // Pastikan elemen ada sebelum mengaksesnya
+            categoryModal.classList.add('hidden');
+        }
+    }
+
+    // Fungsi untuk konfirmasi hapus kategori (dipanggil via onclick)
+    function confirmDeleteCategory(categorySlug, categoryName) {
+        console.log('Fungsi confirmDeleteCategory dipanggil untuk:', categoryName, 'dengan slug:', categorySlug);
+        Swal.fire({
+            title: 'Yakin ingin menghapus kategori?',
+            text: `Anda akan menghapus kategori "${categoryName}" beserta semua menu dan konten di dalamnya. Tindakan ini tidak dapat dibatalkan.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Ya, Hapus Kategori',
+            cancelButtonText: 'Batal'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                console.log('Konfirmasi SweetAlert2: Dihapus!');
+                const loadingNotif = showNotification('Menghapus kategori...', 'loading');
+                try {
+                    const data = await fetchAPI(`/kategori/${categorySlug}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRF-TOKEN': csrfToken,
+                        }
+                    });
+                    hideNotification(loadingNotif);
+                    if (data.success) {
+                        showCentralSuccessPopup(data.success);
+                        window.location.href = `/docs/epesantren`;
+                    } else {
+                        showNotification(data.message || 'Gagal menghapus kategori.', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error deleting category (Fetch API):', error);
+                    hideNotification(loadingNotif);
+                    showNotification(error.message || 'Terjadi kesalahan saat menghapus kategori.', 'error');
+                }
+            }
+        });
+    }
+
+    // Fungsi untuk membuka editor CKEditor (dipanggil via onclick)
+    function openEditor() {
+        const kontenView = document.getElementById('kontenView');
+        const editorContainer = document.getElementById('editor-container');
+        const editorContentTypeInput = document.getElementById('editor-content-type');
+        const editBtn = document.getElementById('editBtn');
+
+        kontenView.classList.add('hidden');
+        editorContainer.classList.remove('hidden');
+        if (editBtn) {
+            editBtn.classList.add('hidden');
+        }
+
+        const activeTabButton = document.querySelector('.content-tabs button.active');
+        let contentType = 'Default';
+        if (activeTabButton) {
+            contentType = activeTabButton.dataset.contentType;
+        }
+        editorContentTypeInput.value = contentType;
+
+        // Pastikan $allDocsContents tersedia dari Blade
+        const allDocsContents = @json($allDocsContents ?? []);
+        const currentContent = allDocsContents.find(doc => doc.title === contentType);
+        const contentToLoad = currentContent ? currentContent.content : '# Belum ada konten untuk ' + contentType;
+
+        // Penting: Pastikan CKEditor library dimuat sebelum memanggil ClassicEditor
+        if (typeof ClassicEditor === 'undefined') {
+            showNotification('Pustaka CKEditor tidak dimuat. Periksa konsol browser untuk kesalahan.', 'error', 5000);
+            console.error('ClassicEditor tidak terdefinisi. Pastikan skrip CKEditor UMD dimuat dengan benar.');
+            return;
+        }
+
+        if (!currentEditorInstance) {
+            const editorConfigFromMainJS = window.CKEDITOR_CONFIG || {};
+
+            const finalEditorConfig = {
+                ...editorConfigFromMainJS,
+                ckfinder: {
+                    uploadUrl: '{{ route('ckeditor.upload') . '?_token=' . csrf_token() }}'
+                },
+                simpleUpload: {
+                    uploadUrl: '{{ route('ckeditor.upload') . '?_token=' . csrf_token() }}'
+                },
+                // Pastikan SimpleUploadAdapter didefinisikan (dari ckeditor/main.js atau CKEditor itu sendiri)
+                plugins: [...(editorConfigFromMainJS.plugins || []), typeof SimpleUploadAdapter !== 'undefined' ? SimpleUploadAdapter : null].filter(Boolean),
+                toolbar: editorConfigFromMainJS.toolbar
+            };
+
+            setTimeout(() => {
+                ClassicEditor
+                    .create(document.querySelector('#editor'), finalEditorConfig)
+                    .then(editor => {
+                        currentEditorInstance = editor;
+                        editor.setData(contentToLoad);
+                    })
+                    .catch(error => {
+                        console.error('Kesalahan saat menginisialisasi CKEditor:', error);
+                        showNotification('Gagal menginisialisasi editor. Detail: ' + error.message, 'error', 5000);
+                    });
+            }, 50);
+        } else {
+            currentEditorInstance.setData(contentToLoad);
+        }
+    }
+
+    // Fungsi untuk menutup editor CKEditor (dipanggil via onclick)
+    function closeEditor() {
+        const kontenView = document.getElementById('kontenView');
+        const editorContainer = document.getElementById('editor-container');
+        const editBtn = document.getElementById('editBtn');
+
+        editorContainer.classList.add('hidden');
+        kontenView.classList.remove('hidden');
+        if (editBtn) {
+            editBtn.classList.remove('hidden');
+        }
+    }
+
+
+        function openCategoryModal(mode = 'create', defaultName = '') {
             if (!categoryForm || !categoryModalTitle) {
-                showNotification('Form kategori atau elemen tombol tidak ditemukan!', 'error');
+                alert('Form kategori tidak ditemukan!');
                 return;
             }
 
             categoryForm.reset();
             document.getElementById('form_category_method').value = mode === 'edit' ? 'PUT' : 'POST';
-            document.getElementById('form_category_nama').value = displayName;
-            document.getElementById('form_original_category_slug').value = originalSlug;
+            document.getElementById('form_category_nama').value = defaultName;
 
             categoryModalTitle.textContent = mode === 'edit' ? 'Edit Kategori' : 'Tambah Kategori';
             categoryModal.classList.remove('hidden');
-
-            // Make sure the cancel button is always enabled when the modal opens for any mode
-            const cancelCategoryFormBtn = document.querySelector('#categoryModal button[onclick="closeCategoryModal()"]');
-            if (cancelCategoryFormBtn) {
-                cancelCategoryFormBtn.disabled = false;
-                cancelCategoryFormBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-            }
         }
 
         function closeCategoryModal() {
-            const categoryModal = document.getElementById('categoryModal'); // Ensure we get the reference here if not global
-            if (categoryModal) {
-                categoryModal.classList.add('hidden');
-            }
-            // Also, if there was any logic that *enabled* other buttons (like editBtn in main content), ensure it's here
-            // For category modal, just hiding it is sufficient for "cancel" behavior.
+            categoryModal.classList.add('hidden');
         }
+
+        // Moved category form submission logic to general script block
 
     </script>
     
@@ -1013,9 +695,9 @@
         const logoutForm = document.getElementById('logout-form');
         const logoutBtn = document.getElementById('logout-btn');
 
-        if (logoutBtn) { // Check if logoutBtn exists before adding event listener
+        if (logoutBtn) {
             logoutBtn.addEventListener('click', function (e) {
-                e.preventDefault(); // always prevent submission first
+                e.preventDefault();
 
                 Swal.fire({
                     title: 'Yakin ingin logout?',
@@ -1028,101 +710,11 @@
                     cancelButtonText: 'Batal'
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        logoutForm.submit(); // only submit if confirmed
+                        logoutForm.submit();
                     }
                 });
             });
         }
-
-        // =================================
-        // VARIABEL & FUNGSI UTILITAS (GLOBAL)
-        // =================================
-        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-        const modalTitleElement = document.getElementById('modal-title');
-        const formCategoryElement = document.getElementById('form_category');
-        const currentCategory = formCategoryElement ? formCategoryElement.value : 'epesantren';
-
-        // === Notifikasi Toast Kecil (untuk loading/error) ===
-        const showNotification = (message, type = 'success', duration = 3000) => {
-            const container = document.getElementById('notification-container');
-            const notifId = 'notif-' + Date.now();
-            const notifDiv = document.createElement('div');
-            notifDiv.id = notifId;
-            notifDiv.className = `notification-message ${type}`;
-
-            let iconClass = '';
-            let timeoutDuration = duration;
-            let delayBeforeShow = 0;
-
-            if (type === 'success') {
-                iconClass = 'fa-solid fa-check-circle text-green-700';
-            } else if (type === 'error') {
-                iconClass = 'fa-solid fa-times-circle text-red-700';
-            } else if (type === 'loading') {
-                iconClass = 'fa-solid fa-spinner fa-spin text-blue-700';
-                timeoutDuration = 0; // Loading notification won't auto-hide
-                delayBeforeShow = 500; // Add 0.5 sec delay for loading notification
-            }
-
-            notifDiv.innerHTML = `<i class="notification-icon ${iconClass}"></i> ${message}`;
-            
-            const showTimeoutId = setTimeout(() => {
-                container.appendChild(notifDiv);
-                setTimeout(() => notifDiv.classList.add('show'), 10);
-            }, delayBeforeShow);
-
-            if (timeoutDuration > 0) {
-                setTimeout(() => {
-                    notifDiv.classList.remove('show');
-                    setTimeout(() => notifDiv.remove(), 500);
-                }, timeoutDuration + delayBeforeShow);
-            }
-
-            return { notifId: notifId, showTimeoutId: showTimeoutId, element: notifDiv };
-        };
-
-        const hideNotification = (notifInfo) => {
-            let notifElement;
-            let showTimeoutId;
-
-            if (typeof notifInfo === 'string') {
-                notifElement = document.getElementById(notifInfo);
-            } else if (typeof notifInfo === 'object' && notifInfo !== null) {
-                notifElement = notifInfo.element;
-                showTimeoutId = notifInfo.showTimeoutId;
-            }
-
-            if (showTimeoutId) {
-                clearTimeout(showTimeoutId);
-            }
-            
-            if (notifElement && notifElement.parentNode) {
-                notifElement.classList.remove('show');
-                setTimeout(() => notifElement.remove(), 500);
-            }
-        };
-
-        // === Fungsi Fetch API ===
-        const fetchAPI = async (url, options = {}) => {
-            const defaultHeaders = {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
-                'Accept': 'application/json',
-            };
-            options.headers = { ...defaultHeaders, ...options.headers };
-
-            try {
-                const response = await fetch(url, options);
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || `Kesalahan HTTP! status: ${response.status}`);
-                }
-                return await response.json();
-            } catch (error) {
-                console.error('Kesalahan Fetch API:', error);
-                throw error;
-            }
-        };
 
         // =================================
         // LOGIKA PENCARIAN (untuk semua user)
@@ -1181,12 +773,15 @@
                     clearSearchInputBtn.classList.remove('hidden');
                 } else {
                     clearSearchInputBtn.classList.add('hidden');
+                    searchResultsList.innerHTML = '<p class="text-center text-gray-500 p-8">Mulai ketik untuk mencari...</p>'; // Clear results immediately if input is empty
+                    return; // Stop here if query is empty
                 }
 
                 if (query.length < 2) {
                     searchResultsList.innerHTML = '<p class="text-center text-gray-500 p-8">Masukkan minimal 2 karakter untuk mencari.</p>';
                     return;
                 }
+
 
                 searchResultsList.innerHTML = '<p class="text-center text-gray-500 p-8">Mencari...</p>';
 
@@ -1196,7 +791,6 @@
                         searchResultsList.innerHTML = '';
                         
                         if (data.results && data.results.length > 0) {
-                            // Group results by menu name first
                             const groupedResultsByMenuName = data.results.reduce((acc, result) => {
                                 if (!acc[result.name]) {
                                     acc[result.name] = [];
@@ -1235,21 +829,28 @@
                 }, 300);
             });
         }
+            // --- FIX FOR CLEAR SEARCH INPUT BUTTON ---
+        // Add a click event listener to the clear button
+        if (clearSearchInputBtn) {
+            clearSearchInputBtn.addEventListener('click', () => {
+                searchOverlayInput.value = ''; // Clear the input field
+                searchOverlayInput.focus();    // Keep focus on the input for immediate re-typing
+                clearSearchInputBtn.classList.add('hidden'); // Hide the clear button
+                searchResultsList.innerHTML = '<p class="text-center text-gray-500 p-8">Mulai ketik untuk mencari...</p>'; // Reset search results display
+            });
+        }
+        // --- END FIX ---
+
 
         // =================================
         // LOGIKA DROPDOWN SIDEBAR (untuk semua user)
         // =================================
 
         const sidebar = document.getElementById('sidebar-navigation');
-        // No need for currentPathname, we'll rely on the active class from PHP
-        // No need for selectedMenuIdFromUrl, as the active state is handled by Blade and `initSidebarDropdown`
 
         if (sidebar) {
             sidebar.addEventListener('click', (e) => {
                 const trigger = e.target.closest('.menu-arrow-icon');
-                // const menuLink = e.target.closest('.menu-link'); // Keep if you need to intercept link clicks
-
-                // Handle dropdown toggle for parent menus
                 if (trigger) {
                     e.preventDefault();
 
@@ -1260,9 +861,6 @@
                     if (submenu) {
                         const isCurrentlyOpen = submenu.classList.contains('open');
 
-                        // Close other top-level submenus to avoid too many open at once
-                        // Only close if it's not the current submenu being toggled
-                        // and not a parent of the current submenu being toggled
                         const allOpenSubmenus = sidebar.querySelectorAll('.submenu-container.open');
                         allOpenSubmenus.forEach(openSubmenu => {
                             let isAncestorOfSelectedItem = false;
@@ -1310,12 +908,12 @@
                             if (triggerButton) {
                                 const icon = triggerButton.querySelector('i');
                                 if (icon) {
-                                    icon.classList.add('open'); // Rotate the arrow
+                                    icon.classList.add('open');
                                     triggerButton.setAttribute('aria-expanded', 'true');
                                 }
                             }
                         }
-                        currentElement = currentElement.parentElement; // Move up the DOM tree
+                        currentElement = currentElement.parentElement;
                     }
                 }
             };
@@ -1329,19 +927,15 @@
         // LOGIKA DROPDOWN KATEGORI HEADER
         // =================================
         const categoryDropdownBtn = document.getElementById('category-dropdown-btn');
-        const categoryDropdownText = document.getElementById('category-button-text'); // Get the span element
+        const categoryDropdownText = document.getElementById('category-button-text');
         const categoryDropdownMenu = document.getElementById('category-dropdown-menu');
 
-        // Mobile category dropdown elements
         const categoryDropdownBtnMobile = document.getElementById('category-dropdown-btn-mobile');
         const categoryDropdownTextMobile = document.getElementById('category-button-text-mobile');
         const categoryDropdownMenuMobile = document.getElementById('category-dropdown-menu-mobile');
 
-
-        // Get current category name from Laravel ($currentCategory)
         const currentCategoryFromBlade = "{{ $currentCategory ?? 'default' }}";    
 
-        // Function to update dropdown button text
         const updateCategoryButtonText = (categoryKey, targetTextElement) => {
             let categoryDisplayName = categoryKey.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
             if (targetTextElement) {
@@ -1349,17 +943,14 @@
             }
         };
 
-        // Call this function on DOM load to set initial text
         updateCategoryButtonText(currentCategoryFromBlade, categoryDropdownText);
         if (categoryDropdownTextMobile) {
             updateCategoryButtonText(currentCategoryFromBlade, categoryDropdownTextMobile);
         }
         
-
-
         if (categoryDropdownBtn && categoryDropdownMenu) {
             categoryDropdownBtn.addEventListener('click', (e) => {
-                e.stopPropagation(); // Prevent click event from propagating to document and closing dropdown immediately
+                e.stopPropagation();
                 categoryDropdownMenu.classList.toggle('open');
                 const chevronIcon = categoryDropdownBtn.querySelector('.fa-chevron-down, .fa-chevron-up');
                 if (categoryDropdownMenu.classList.contains('open')) {
@@ -1371,44 +962,36 @@
                 }
             });
 
-            // Close the dropdown if the user clicks outside of it
             document.addEventListener('click', (event) => {
                 if (!categoryDropdownBtn.contains(event.target) && !categoryDropdownMenu.contains(event.target)) {
-                    categoryDropdownMenu.classList.remove('open');
-                    const chevronIcon = categoryDropdownBtn.querySelector('.fa-chevron-up');
-                    if (chevronIcon) { // Ensure icon exists before trying to remove class
-                        chevronIcon.classList.remove('fa-chevron-up');
-                        chevronIcon.classList.add('fa-chevron-down');
-                    }
-                }
-            });
-
-            // Handle clicks on dropdown items
-            categoryDropdownMenu.querySelectorAll('a').forEach(item => {
-                item.addEventListener('click', (e) => {
-                    // NO need for e.preventDefault() because we want the link navigation to happen
-                    // Get category key from href attribute
-                    const href = item.getAttribute('href'); // Use 'item' not 'e.target' to ensure this is an <a>
-                    const url = new URL(href);
-                    const newCategoryKey = url.searchParams.get('category'); // Get 'category' value from URL
-
-                    if (newCategoryKey) {
-                        updateCategoryButtonText(newCategoryKey, categoryDropdownText); // Update button text based on new key
-                    }
-
-                    // Close the dropdown after item is clicked
                     categoryDropdownMenu.classList.remove('open');
                     const chevronIcon = categoryDropdownBtn.querySelector('.fa-chevron-up');
                     if (chevronIcon) {
                         chevronIcon.classList.remove('fa-chevron-up');
                         chevronIcon.classList.add('fa-chevron-down');
                     }
-                    // Navigation to the selected URL will happen automatically because it's an <a> tag
+                }
+            });
+
+            categoryDropdownMenu.querySelectorAll('a').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    const href = item.getAttribute('href');
+                    const url = new URL(href);
+                    const newCategoryKey = url.searchParams.get('category');
+
+                    if (newCategoryKey) {
+                        updateCategoryButtonText(newCategoryKey, categoryDropdownText);
+                    }
+                    categoryDropdownMenu.classList.remove('open');
+                    const chevronIcon = categoryDropdownBtn.querySelector('.fa-chevron-up');
+                    if (chevronIcon) {
+                        chevronIcon.classList.remove('fa-chevron-up');
+                        chevronIcon.classList.add('fa-chevron-down');
+                    }
                 });
             });
         }
         
-        // Mobile Category Dropdown Logic
         if (categoryDropdownBtnMobile && categoryDropdownMenuMobile) {
             categoryDropdownBtnMobile.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -1453,26 +1036,6 @@
             });
         }
 
-
-        // =================================
-        // NEW CENTRAL SUCCESS POPUP LOGIC
-        // =================================
-        const centralSuccessPopup = document.getElementById('central-success-popup');
-        const centralPopupMessage = document.getElementById('central-popup-message');
-
-        const showCentralSuccessPopup = (message) => {
-            if (centralPopupMessage) {
-                centralPopupMessage.textContent = message;
-            }
-            if (centralSuccessPopup) {
-                centralSuccessPopup.classList.add('show');
-                // Auto-hide after 1 second
-                setTimeout(() => {
-                    centralSuccessPopup.classList.remove('show');
-                }, 1000); // 1000 ms = 1 detik
-            }
-        };
-
         // =================================
         // LOGIKA ADMIN (MODAL & CRUD) - HANYA DIJALANKAN JIKA USER ADALAH ADMIN
         // =================================
@@ -1484,10 +1047,9 @@
                 const deleteConfirmMessage = document.getElementById('delete-confirm-message');
                 const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
                 const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
-                const categoryModal = document.getElementById('categoryModal');
-                const categoryForm = document.getElementById('categoryForm');
-                const categoryModalTitle = document.getElementById('categoryModalTitle');
-                const deleteContentBtn = document.getElementById('delete-content-btn'); // New delete content button
+                const categoryForm = document.getElementById('categoryForm'); // Dapatkan elemen categoryForm
+                const categoryModalTitle = document.getElementById('categoryModalTitle'); // Dapatkan elemen categoryModalTitle
+                const deleteContentBtn = document.getElementById('delete-content-btn');
 
                 let menuToDelete = null;
 
@@ -1512,43 +1074,46 @@
                     categoryModal.classList.add('hidden');
                 }
                 
+                // New function for category deletion confirmation (using SweetAlert2)
                 const confirmDeleteCategory = (categorySlug, categoryName) => {
+                    console.log('Fungsi confirmDeleteCategory dipanggil untuk:', categoryName); // Tambahkan ini
                     Swal.fire({
                         title: 'Yakin ingin menghapus kategori?',
-                        text: `Anda akan menghapus kategori "${categoryName}" beserta semua menu dan konten di dalamnya.`,
+                        text: `Anda akan menghapus kategori "${categoryName}" beserta semua menu dan konten di dalamnya. Tindakan ini tidak dapat dibatalkan.`,
                         icon: 'warning',
                         showCancelButton: true,
                         confirmButtonColor: '#d33',
                         cancelButtonColor: '#3085d6',
-                        confirmButtonText: 'Ya, Hapus',
+                        confirmButtonText: 'Ya, Hapus Kategori',
                         cancelButtonText: 'Batal'
                     }).then(async (result) => {
                         if (result.isConfirmed) {
+                            console.log('Konfirmasi SweetAlert2: Dihapus!'); // Tambahkan ini
                             const loadingNotif = showNotification('Menghapus kategori...', 'loading');
                             try {
-                                const response = await fetch(`/kategori/${categorySlug}`, {
+                                const data = await fetchAPI(`/kategori/${categorySlug}`, {
                                     method: 'DELETE',
                                     headers: {
-                                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                                        'Accept': 'application/json',
+                                        'X-CSRF-TOKEN': csrfToken,
                                     }
                                 });
-                                const data = await response.json();
                                 hideNotification(loadingNotif);
                                 if (data.success) {
                                     showCentralSuccessPopup(data.success);
+                                    // Redirect to the default category or home after deleting a category
                                     window.location.href = `/docs/epesantren`;
                                 } else {
                                     showNotification(data.message || 'Gagal menghapus kategori.', 'error');
                                 }
                             } catch (error) {
-                                console.error('Error:', error);
+                                console.error('Error deleting category:', error);
                                 hideNotification(loadingNotif);
-                                showNotification('Terjadi kesalahan saat menghapus kategori.', 'error');
+                                showNotification(error.message || 'Terjadi kesalahan saat menghapus kategori.', 'error');
                             }
                         }
                     });
                 };
+
 
                 // Category Form Submission
                 if (categoryForm) {
@@ -1560,14 +1125,14 @@
                         const categoryNameInput = document.getElementById('form_category_nama');
                         const categoryName = categoryNameInput.value;
                         const method = document.getElementById('form_category_method').value;
-                        const originalCategorySlug = document.getElementById('form_original_category_slug').value; // Get the original slug
-
+                        
                         let url = '/kategori'; // For POST (create)
                         let httpMethod = 'POST';
 
                         if (method === 'PUT') {
-                            // Use the originalCategorySlug for the URL
-                            url = `/kategori/${originalCategorySlug}`;
+                            // When editing, the URL should include the original slug of the category being edited.
+                            // We're using `currentCategory` from Blade for this.
+                            url = `/kategori/${currentCategory}`;
                             httpMethod = 'POST'; // Laravel route uses POST with _method PUT for updates
                         }
 
@@ -1586,14 +1151,13 @@
                             }
 
                             const data = await fetchAPI(url, options);
-
-                            hideNotification(loadingNotif);
+                            
+                            hideNotification(loadingNotif);    
                             if (data.success) {
                                 showCentralSuccessPopup(data.success);
                                 closeCategoryModal();
                                 // Redirect to the new category slug if it was an edit or new category
                                 const newSlug = data.new_slug || categoryName.toLowerCase().replace(/\s+/g, '-');
-                                // Ensure the redirect uses the correct, updated slug
                                 window.location.href = `/docs/${newSlug}`;
                             } else {
                                 showNotification(data.message || 'Gagal memproses kategori.', 'error');
@@ -1606,6 +1170,7 @@
                     });
                 }
                 
+
                 const openMenuModal = (mode, menuData = null, parentId = 0) => {
                     if (!menuForm || !modalTitleElement) {
                         showNotification('Elemen form menu tidak ditemukan.', 'error');
@@ -1737,6 +1302,59 @@
                     });
                 };
                 
+                // Kategori Form Submission
+                if (categoryForm) {
+                    categoryForm.addEventListener('submit', async function (e) {
+                        e.preventDefault();
+
+                        const loadingNotif = showNotification('Memproses kategori...', 'loading');
+
+                        const categoryNameInput = document.getElementById('form_category_nama');
+                        const categoryName = categoryNameInput.value;
+                        const method = document.getElementById('form_category_method').value;
+                        
+                        let url = '/kategori'; // For POST (create)
+                        let httpMethod = 'POST';
+
+                        const currentCategory = document.getElementById('form_category').value;
+
+                        if (method === 'PUT') {
+                            url = `/kategori/${currentCategory}`;
+                        }
+
+                        try {
+                            const options = {
+                                method: httpMethod,
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': csrfToken,
+                                },
+                                body: JSON.stringify({ category: categoryName }),
+                            };
+
+                            if (method === 'PUT') {
+                                options.headers['X-HTTP-Method-Override'] = 'PUT';
+                            }
+
+                            const data = await fetchAPI(url, options);
+                            
+                            hideNotification(loadingNotif);    
+                            if (data.success) {
+                                showCentralSuccessPopup(data.success);
+                                closeCategoryModal();
+                                const newSlug = data.new_slug || categoryName.toLowerCase().replace(/\s+/g, '-');
+                                window.location.href = `/docs/${newSlug}`;
+                            } else {
+                                showNotification(data.message || 'Gagal memproses kategori.', 'error');
+                            }
+                        } catch (error) {
+                            console.error('Error:', error);
+                            hideNotification(loadingNotif);
+                            showNotification(error.message || 'Terjadi kesalahan saat memproses kategori.', 'error');
+                        }
+                    });
+                }
+                
                 if (menuForm) {
                     menuForm.addEventListener('submit', async (e) => {
                         e.preventDefault();
@@ -1750,7 +1368,7 @@
                         const dataToSend = {};
                         formData.forEach((value, key) => {
                             if (key === 'menu_status') {
-                                dataToSend[key] = value === '1' ? 1 : 0; // Ensure boolean is sent correctly
+                                dataToSend[key] = value === '1' ? 1 : 0;
                             } else {
                                 dataToSend[key] = value;
                             }
@@ -1774,7 +1392,7 @@
                             const data = await fetchAPI(url, options);
                             
                             hideNotification(loadingNotif);    
-                            showCentralSuccessPopup(data.success); // Use the new central success popup
+                            showCentralSuccessPopup(data.success);
                             
                             closeMenuModalAdmin();
                             refreshSidebar();
@@ -1804,7 +1422,7 @@
                                 const data = await fetchAPI(`/api/navigasi/${menuToDelete.id}`, { method: 'DELETE' });
                                 
                                 hideNotification(deleteLoadingNotif);    
-                                showCentralSuccessPopup(data.success); // Use the new central success popup
+                                showCentralSuccessPopup(data.success);
                                 
                                 closeDeleteConfirmModal();
                                 refreshSidebar();
@@ -1818,7 +1436,6 @@
                     });
                 }
                 
-                // New logic for deleting specific content type
                 if (deleteContentBtn) {
                     deleteContentBtn.addEventListener('click', async () => {
                         const menuId = '{{ $menu_id ?? 0 }}';
@@ -1845,7 +1462,6 @@
                                     hideNotification(loadingNotif);
                                     if (data.success) {
                                         showCentralSuccessPopup(data.success);
-                                        // Reload the page to reflect the content deletion and possibly show default content
                                         window.location.reload();    
                                     } else {
                                         showNotification(data.error || 'Gagal menghapus konten.', 'error');
@@ -1860,7 +1476,6 @@
                     });
                 }
 
-
                 attachAdminEventListeners();            
             @endif
         @endauth
@@ -1872,42 +1487,33 @@
         const editorForm = document.getElementById('editor-form');
         const editorContentTypeInput = document.getElementById('editor-content-type');
         const documentationContent = document.getElementById('documentation-content');
-        const cancelEditorBtn = document.getElementById('cancel-editor-btn'); // Get cancel button
+        const cancelEditorBtn = document.getElementById('cancel-editor-btn');
         
-        // This variable is passed from the server for all contents related to the current menu
         const allDocsContents = @json($allDocsContents ?? []);    
-        // Get the initial content type that was displayed (from the URL query parameter)
         const initialActiveContentType = new URLSearchParams(window.location.search).get('content_type') || 'Default';
 
         if (contentTabsContainer) {
-            // Function to update content based on selected tab
             const updateContentDisplay = (contentType) => {
                 const contentData = allDocsContents.find(doc => doc.title === contentType);
                 if (kontenView) {
                     kontenView.innerHTML = contentData ? contentData.content : '<h3>Konten belum tersedia.</h3><p>Silakan edit untuk menambahkan konten untuk ' + contentType + '.</p>';
                 }
-                // Update the hidden input for the editor form
                 if (editorContentTypeInput) {
                     editorContentTypeInput.value = contentType;
                 }
-                // Update URL without reloading
                 const url = new URL(window.location);
                 url.searchParams.set('content_type', contentType);
                 window.history.pushState({}, '', url);
             };
 
-            // Add click listeners to tab buttons
             contentTabsContainer.querySelectorAll('.tab-button').forEach(button => {
                 button.addEventListener('click', () => {
-                    // Remove 'active' class from all buttons
                     contentTabsContainer.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-                    // Add 'active' class to the clicked button
                     button.classList.add('active');
 
                     const contentType = button.dataset.contentType;
                     updateContentDisplay(contentType);
 
-                    // If editor is open, update its content as well
                     if (!editorContainer.classList.contains('hidden') && typeof currentEditorInstance !== 'undefined' && currentEditorInstance !== null) {
                         const contentToLoad = allDocsContents.find(doc => doc.title === contentType)?.content || '# Belum ada konten untuk ' + contentType;
                         currentEditorInstance.setData(contentToLoad);
@@ -1915,19 +1521,16 @@
                 });
             });
 
-            // Set the initial active tab based on query parameter or default to the first
             let initialTabButton = contentTabsContainer.querySelector(`[data-content-type="${initialActiveContentType}"]`);
             if (!initialTabButton && contentTabsContainer.children.length > 0) {
                 initialTabButton = contentTabsContainer.children[0];
             }
             if (initialTabButton) {
                 initialTabButton.classList.add('active');
-                updateContentDisplay(initialTabButton.dataset.contentType); // Ensure correct content is displayed initially
+                updateContentDisplay(initialTabButton.dataset.contentType);
             }
         }
 
-
-        // Override the form submission to include content_type
         if (editorForm) {
             editorForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
@@ -1959,9 +1562,6 @@
                     hideNotification(loadingNotif);
                     showCentralSuccessPopup(data.success || 'Konten berhasil disimpan!');
 
-                    // After saving, reload allDocsContents to get the latest data
-                    // This is a simplified approach, a more robust solution might involve updating `allDocsContents` directly
-                    // and then calling `updateContentDisplay` with the new data. For now, a full reload is safer.
                     window.location.reload();    
 
                 } catch (error) {
@@ -1978,8 +1578,6 @@
 
     });
 
-        // Responsive Side Menu
-        
     const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
     const sidebarElement = document.querySelector('aside');
     const backdrop = document.getElementById('sidebar-backdrop');
@@ -1989,7 +1587,6 @@
         backdrop.classList.toggle('show');
     };
 
-    // Toggle open/close
     if (mobileMenuToggle) {
         mobileMenuToggle.addEventListener('click', toggleSidebar);
     }
