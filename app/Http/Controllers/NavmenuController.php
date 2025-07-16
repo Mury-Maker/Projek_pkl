@@ -350,24 +350,23 @@ class NavmenuController extends Controller
      */
     public function destroyCategory($categorySlug)
     {
-        // 🚨 PERBAIKAN 1: Guard sisi server untuk kategori default
+        // Guard sisi server untuk kategori default
         if ($categorySlug === 'epesantren') {
             return response()->json(['message' => 'Kategori "ePesantren" tidak dapat dihapus.'], 403);
         }
 
         try {
             DB::transaction(function () use ($categorySlug) {
-                // Ambil semua menu yang termasuk dalam kategori ini
-                $menusInThisCategory = NavMenu::where('category', $categorySlug)->get();
+                // Ambil semua menu ID dalam kategori ini
+                $menuIdsInThisCategory = NavMenu::where('category', $categorySlug)->pluck('menu_id')->toArray();
 
-                // 🚨 PERBAIKAN 2: Iterasi dan panggil metode destroy rekursif
-                foreach ($menusInThisCategory as $menu) {
-                    // Hanya panggil destroy pada menu level teratas (menu_child = 0)
-                    // karena metode destroy() itu sendiri akan menangani anak-anaknya secara rekursif
-                    if ($menu->menu_child === 0) {
-                        $this->destroy($menu); // Panggil metode destroy di controller ini
-                    }
+                // Hapus semua konten dokumentasi yang terkait dengan menu-menu ini
+                if (!empty($menuIdsInThisCategory)) {
+                    DocsContent::whereIn('menu_id', $menuIdsInThisCategory)->delete();
                 }
+
+                // Hapus semua menu di kategori ini (tidak perlu rekursif karena kita menghapus berdasarkan kategori)
+                NavMenu::where('category', $categorySlug)->delete();
             });
 
             return response()->json(['success' => 'Kategori dan semua menu di dalamnya berhasil dihapus!']);
