@@ -43,53 +43,43 @@
 
         @endphp
         @if($isParent)
-                <button
-                    type="button"
-                    data-toggle="submenu-{{ $item->menu_id }}"
-                    aria-expanded="false"
-                    aria-controls="submenu-{{ $item->menu_id }}"
-                    aria-label="Toggle submenu for {{ $item->menu_nama }}">
-                    <a href="{{ $menuHref }}" class="{{ $linkClasses }}" style="min-width: 0;">
-                        {{-- Placeholder atau Ikon --}}
-                        <div class="w-4 flex-shrink-0 text-center">
-                            @if($item->menu_nama == 'Detail Sub 1')
-                                <i class="fas fa-circle text-[0.4em]"></i>
-                            @elseif($item->menu_icon)
-                                <i class="{{ $item->menu_icon }}"></i>
-                            @else
-                                <span class="w-1"></span> {{-- Placeholder jika tidak ada ikon --}}
-                            @endif
-                        </div>
-                        {{-- Nama Menu --}}
-                        <span class="ml-2 flex-grow min-w-0 truncate">{{ $item->menu_nama }}</span>
-                    </a>
-                </button>
+        {{-- Jika ini adalah parent menu, gunakan div yang bisa diklik untuk toggle submenu --}}
+        <div class="{{ $linkClasses }} cursor-pointer" data-toggle="submenu-{{ $item->menu_id }}" aria-expanded="false" aria-controls="submenu-{{ $item->menu_id }}">
+            {{-- Ikon --}}
+            <div class="w-4 flex-shrink-0 text-center">
+                @if($item->menu_nama == 'Detail Sub 1')
+                    <i class="fas fa-circle text-[0.4em]"></i>
+                @elseif($item->menu_icon)
+                    <i class="{{ $item->menu_icon }}"></i>
+                @else
+                    <span class="w-1"></span> {{-- Placeholder jika tidak ada ikon --}}
+                @endif
+            </div>
+            {{-- Nama Menu --}}
+            <span class="ml-2 flex-grow min-w-0 truncate">{{ $item->menu_nama }}</span>
+        </div>
         @else
-            <a href="{{ $menuHref }}" class="{{ $linkClasses }}" style="min-width: 0;">
-                {{-- Placeholder atau Ikon --}}
-                <div class="w-4 flex-shrink-0 text-center">
-                    @if($item->menu_nama == 'Detail Sub 1')
-                        <i class="fas fa-circle text-[0.4em]"></i>
-                    @elseif($item->menu_icon)
-                        <i class="{{ $item->menu_icon }}"></i>
-                    @endif
-                </div>
-
-                {{-- Nama Menu --}}
-                <span class="ml-2 flex-grow min-w-0 truncate">{{ $item->menu_nama }}</span>
-            </a>
-                
+        {{-- Jika ini bukan parent menu, gunakan a tag biasa --}}
+        <a href="{{ $menuHref }}" class="{{ $linkClasses }}" style="min-width: 0;">
+            {{-- Ikon --}}
+            <div class="w-4 flex-shrink-0 text-center">
+                @if($item->menu_nama == 'Detail Sub 1')
+                    <i class="fas fa-circle text-[0.4em]"></i>
+                @elseif($item->menu_icon)
+                    <i class="{{ $item->menu_icon }}"></i>
+                @endif
+            </div>
+            {{-- Nama Menu --}}
+            <span class="ml-2 flex-grow min-w-0 truncate">{{ $item->menu_nama }}</span>
+        </a>
         @endif
-        {{-- Kontainer KIRI: Ikon Menu dan Nama Menu --}}
-        {{-- Ini adalah A-tag itu sendiri, yang akan mengambil sebagian besar ruang. --}}
 
         {{-- Kontainer KANAN: Tombol Admin dan Panah Dropdown --}}
-        {{-- Ini akan memiliki lebar yang fleksibel saat tidak ada admin, dan lebar tetap saat ada admin --}}
         <div class="flex items-center flex-shrink-0">
 
             {{-- Tombol Admin (Add Child, Edit, Delete) --}}
             @if(isset($editorMode) && $editorMode)
-            <div class="flex items-center space-x-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mr-1"> {{-- **PERUBAHAN: mr-1 untuk jarak dari panah** --}}
+            <div class="flex items-center space-x-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mr-1">
                 @if ($item->menu_child >= 0)
                 <button
                     data-parent-id="{{ $item->menu_id }}"
@@ -118,8 +108,7 @@
             @endif
 
             {{-- Panah Dropdown --}}
-            {{-- Pastikan ini di paling kanan. Gunakan ml-auto saat tidak ada editorMode aktif. --}}
-            <div class="flex-shrink-0 w-8 h-8 flex items-center justify-center pr-3 {{ !isset($editorMode) || !$editorMode ? 'ml-auto' : '' }}"> {{-- **PERUBAHAN: ml-auto kondisional** --}}
+            <div class="flex-shrink-0 w-8 h-8 flex items-center justify-center pr-3 {{ !isset($editorMode) || !$editorMode ? 'ml-auto' : '' }}">
                 @if($item->menu_status == 0)
 
                 <button
