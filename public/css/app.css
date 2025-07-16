@@ -295,6 +295,20 @@ body {
     justify-content: flex-end;
 }
 
+/* Untuk nama kategori di judul paling kiri header */
+.header-main-category-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    /* Ini adalah area yang paling mungkin perlu penyesuaian */
+    /* Berikan max-width yang lebih kecil dan pastikan flex-shrink aktif */
+    min-width: 200px;
+    max-width: 200px; /* Coba nilai yang lebih kecil lagi */
+    display: inline-block; /* Tetap pertahankan */
+    vertical-align: middle;
+    flex-shrink: 1; /* Pastikan bisa menyusut jika parent adalah flex */
+}
+
 /* Tambahkan kelas baru untuk kontainer tombol search */
 .search-button-wrapper {
     flex-grow: 1; /* **PERUBAHAN PENTING: Beri flex-grow: 1 pada wrapper search** */
@@ -338,20 +352,28 @@ body {
     transform: translateY(0);
 }
 
-/* Dropdown untuk Kategori di Header */
+.header-spacer-left .relative {
+    /* Pastikan ini ada jika kamu belum menyediakannya secara eksplisit */
+    position: relative;
+    display: inline-block; /* Agar lebarnya sesuai content atau button */
+}
+
 .header-dropdown-menu {
     display: none;
     position: absolute;
-    background-color: white; /* Warna latar belakang putih */
-    min-width: 160px;
+    background-color: white;
+    /* Perbaikan UTAMA: Samakan lebar dropdown dengan tombol #category-dropdown-btn */
+    min-width: 200px; /* Sesuai dengan max-width #category-dropdown-btn */
+    max-width: 200px; /* Sesuai dengan max-width #category-dropdown-btn */
     box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
-    z-index: 1;
+    z-index: 1000;
     border-radius: 0.5rem;
     overflow: hidden;
-    top: 100%; /* Posisi di bawah tombol induk */
-    left: 0;
+    top: 100%; /* Menempatkan dropdown tepat di bawah elemen induk (tombol) */
+    left: 0; /* Menyelaraskan sisi kiri dropdown dengan sisi kiri elemen induknya */
     margin-top: 0.5rem;
-    border: 1px solid #4a5568; /* Garis luar gelap (warna gray-700 dari Tailwind) */
+    border: 1px solid #e5e7eb; /* Changed to a lighter grey border */
+    padding: 4px 0; /* Padding for the dropdown content itself */
 }
 
 .header-dropdown-menu.open {
@@ -359,29 +381,72 @@ body {
 }
 
 .header-dropdown-menu a {
-    color: black;
-    padding: 12px 16px;
+    color: #4b5563;
+    padding: 10px 16px;
     text-decoration: none;
-    display: block;
-    text-align: left;
+    display: flex; /* Use flex to align text and edit/delete buttons */
+    align-items: center;
+    justify-content: space-between; /* Space out content and buttons */
+    font-size: 14px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    position: relative;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
 }
 
 .header-dropdown-menu a:hover {
     background-color: #f1f1f1;
 }
 
-/* Kustomisasi untuk tombol dropdown Kategori */
+/* For the category name inside the dropdown button in the header */
 #category-dropdown-btn {
-    background: linear-gradient(135deg, #4f46e5, #3b82f6); /* ungu ke biru */
+    flex-shrink: 0; /* Changed to 0 so it doesn't shrink too much easily */
+    min-width: 200px; /* Give it a more substantial min-width */
+    max-width: 200px; /* Keep a reasonable max-width */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-sizing: border-box;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #4f46e5, #3b82f6);
     color: #fff;
-    border: none;
     font-weight: 600;
+    border: none;
+    border-radius: 0.5rem;
     transition: background-color 0.3s ease, transform 0.2s ease;
+    margin: 0;
+    padding: 8px 16px;
 }
 
 #category-dropdown-btn:hover {
     background: linear-gradient(135deg, #6366f1, #60a5fa);
     transform: translateY(-1px);
+}
+
+#category-dropdown-btn #category-button-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: calc(100% - 30px);
+    min-width: 0;
+    display: inline-block;
+    vertical-align: middle;
+    flex-shrink: 1;
+}
+
+/* For category names in the header dropdown menu items */
+.header-dropdown-menu .header-dropdown-item-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    /* Adjust max-width so dropdown items don't extend too far */
+    max-width: 220px; /* **ADJUST THIS VALUE** - smaller than button if needed */
+    min-width: 0;
+    display: inline-block;
+    vertical-align: middle;
+    flex-shrink: 1;
 }
 
 /* Dropdown menu */

@@ -43,43 +43,35 @@
 
         @endphp
         @if($isParent)
-                <button
-                    type="button"
-                    data-toggle="submenu-{{ $item->menu_id }}"
-                    aria-expanded="false"
-                    aria-controls="submenu-{{ $item->menu_id }}"
-                    aria-label="Toggle submenu for {{ $item->menu_nama }}">
-                    <a href="{{ $menuHref }}" class="{{ $linkClasses }}" style="min-width: 0;">
-                        {{-- Placeholder atau Ikon --}}
-                        <div class="w-4 flex-shrink-0 text-center">
-                            @if($item->menu_nama == 'Detail Sub 1')
-                                <i class="fas fa-circle text-[0.4em]"></i>
-                            @elseif($item->menu_icon)
-                                <i class="{{ $item->menu_icon }}"></i>
-                            @else
-                                <span class="w-1"></span> {{-- Placeholder jika tidak ada ikon --}}
-                            @endif
-                        </div>
-                        {{-- Nama Menu --}}
-                        <span class="ml-2 flex-grow min-w-0 truncate">{{ $item->menu_nama }}</span>
-                    </a>
-                </button>
+        <div class="{{ $linkClasses }} cursor-pointer" data-toggle="submenu-{{ $item->menu_id }}" aria-expanded="false" aria-controls="submenu-{{ $item->menu_id }}">
+            {{-- Ikon --}}
+            <div class="w-4 flex-shrink-0 text-center">
+                @if($item->menu_nama == 'Detail Sub 1')
+                    <i class="fas fa-circle text-[0.4em]"></i>
+                @elseif($item->menu_icon)
+                    <i class="{{ $item->menu_icon }}"></i>
+                @else
+                    <span class="w-1"></span>
+                @endif
+            </div>
+            {{-- Nama Menu --}}
+            <span class="ml-2 flex-grow min-w-0 truncate">{{ $item->menu_nama }}</span>
+        </div>
         @else
-            <a href="{{ $menuHref }}" class="{{ $linkClasses }}" style="min-width: 0;">
-                {{-- Placeholder atau Ikon --}}
-                <div class="w-4 flex-shrink-0 text-center">
-                    @if($item->menu_nama == 'Detail Sub 1')
-                        <i class="fas fa-circle text-[0.4em]"></i>
-                    @elseif($item->menu_icon)
-                        <i class="{{ $item->menu_icon }}"></i>
-                    @endif
-                </div>
-
-                {{-- Nama Menu --}}
-                <span class="ml-2 flex-grow min-w-0 truncate">{{ $item->menu_nama }}</span>
-            </a>
-                
+        <a href="{{ $menuHref }}" class="{{ $linkClasses }}" style="min-width: 0;">
+            {{-- Ikon --}}
+            <div class="w-4 flex-shrink-0 text-center">
+                @if($item->menu_nama == 'Detail Sub 1')
+                    <i class="fas fa-circle text-[0.4em]"></i>
+                @elseif($item->menu_icon)
+                    <i class="{{ $item->menu_icon }}"></i>
+                @endif
+            </div>
+            {{-- Nama Menu --}}
+            <span class="ml-2 flex-grow min-w-0 truncate">{{ $item->menu_nama }}</span>
+        </a>
         @endif
+
         {{-- Kontainer KIRI: Ikon Menu dan Nama Menu --}}
         {{-- Ini adalah A-tag itu sendiri, yang akan mengambil sebagian besar ruang. --}}
 

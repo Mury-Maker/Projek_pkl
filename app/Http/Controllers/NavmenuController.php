@@ -283,7 +283,7 @@ class NavmenuController extends Controller
 
             DocsContent::create([
                 'menu_id' => $menu->menu_id,
-                'content' => '# Beranda ' . $displayCategoryName . "\n\nSelamat datang di dokumentasi untuk " . $displayCategoryName . ". Ini adalah halaman beranda Anda.",
+                'content' => '# Beranda ' . $displayCategoryName . "\n\nSelamat datang adit, di dokumentasi untuk " . $displayCategoryName . ". Ini adalah halaman beranda Anda.",
                 'title' => 'Default'
             ]);
         });

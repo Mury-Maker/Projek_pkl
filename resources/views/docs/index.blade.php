@@ -12,7 +12,6 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
 
-    
     {{-- CKEditor CSS hanya dimuat jika user adalah admin --}}
     @auth
         @if(auth()->user()->role === 'admin')
@@ -34,13 +33,19 @@
                         <button id="mobile-menu-toggle" class="md:hidden text-gray-600 focus:outline-none focus:text-gray-900">
                             <i class="fas fa-bars fa-lg"></i>
                         </button>
-                        <a href="{{ route('docs', ['category' => $currentCategory]) }}" class="text-2xl font-bold text-blue-600">{!! ucwords(str_replace('-',' ',$currentCategory)) !!}</a>
-                                                    
+                        {{-- Batasi tampilan nama kategori di judul kiri header --}}
+                        <a href="{{ route('docs', ['category' => $currentCategory]) }}" 
+                           class="text-2xl font-bold text-blue-600 header-main-category-title" 
+                           title="{!! ucwords(str_replace('-',' ',$currentCategory)) !!}">
+                           {!! ucwords(str_replace('-',' ',$currentCategory)) !!}
+                        </a>
+                                                
                         @php use Illuminate\Support\Str; @endphp
 
                         <div class="relative hidden md:block">
-                            <button id="category-dropdown-btn" class="flex items-center px-4 py-2 text-base font-medium rounded-lg transition-colors focus:outline-none">
-                                <span id="category-button-text">{!! ucwords(str_replace('-',' ',$currentCategory)) !!}</span>
+                            {{-- Batasi tampilan nama kategori di tombol dropdown --}}
+                            <button id="category-dropdown-btn" class="flex items-center px-4 py-2 text-base font-medium rounded-lg transition-colors focus:outline-none header-dropdown-button-text">
+                                <span id="category-button-text" title="{!! ucwords(str_replace('-',' ',$currentCategory)) !!}">{!! ucwords(str_replace('-',' ',$currentCategory)) !!}</span>
                                 <i class="ml-2 fa fa-chevron-down text-xs"></i>
                             </button>
 
@@ -51,16 +56,18 @@
                                         $isActive = $currentCategory === $slug;
                                     @endphp
                                     <div class="flex items-center justify-between">
+                                        {{-- Nama kategori di item dropdown juga dibatasi jika terlalu panjang --}}
                                         <a href="{{ route('docs', ['category' => $slug]) }}"
-                                           class="flex-grow px-3 py-2 text-sm font-medium {{ $isActive ? 'bg-gray-100 text-gray-800' : 'text-gray-700 hover:bg-gray-50' }}"
+                                           class="flex-grow px-3 py-2 text-sm font-medium {{ $isActive ? 'bg-gray-100 text-gray-800' : 'text-gray-700 hover:bg-gray-50' }} header-dropdown-item-text"
                                            data-category-key="{{ $slug }}"
-                                           data-category-name="{{ $cats }}">
+                                           data-category-name="{{ $cats }}"
+                                           title="{!! ucwords(str_replace('-',' ',$cats)) !!}">
                                             {!! ucwords(str_replace('-',' ',$cats)) !!}
                                         </a>
                                         @auth
                                             @if(auth()->user()->role === 'admin')
                                                 <div class="flex-shrink-0 flex items-center space-x-1 pr-2">
-                                                    <button type="button" onclick="openCategoryModal('edit', '{{ $slug }}', '{{ $cats }}')" title="Edit Kategori" class="text-blue-500 hover:text-blue-700 p-1">
+                                                    <button type="button" onclick="openCategoryModal('edit', '{{ $cats }}', '{{ $slug }}')" title="Edit Kategori" class="text-blue-500 hover:text-blue-700 p-1">
                                                         <i class="fas fa-edit"></i>
                                                     </button>
                                                     {{-- Button Delete Kategori --}}
@@ -78,7 +85,7 @@
                                     @if(auth()->user()->role === 'admin')
                                         <div class="border-t border-gray-200 my-1"></div>
                                         
-                                        <button onclick="openCategoryModal('create')" class="text-blue-600 hover:underline text-sm" style="padding:10px;">
+                                        <button onclick="openCategoryModal('create', '', '')" class="text-blue-600 hover:underline text-sm" style="padding:10px;">
                                             + Tambah Kategori
                                         </button>
                                     @endif
@@ -134,8 +141,8 @@
                         </div>
                     @endauth
                     
-                        <button id="category-dropdown-btn-mobile" class="flex items-center px-4 py-2 text-base font-medium rounded-lg transition-colors focus:outline-none">
-                            <span id="category-button-text-mobile">{!! ucwords(str_replace('-',' ',$currentCategory)) !!}</span>
+                        <button id="category-dropdown-btn-mobile" class="flex items-center px-4 py-2 text-base font-medium rounded-lg transition-colors focus:outline-none header-dropdown-button-text">
+                            <span id="category-button-text-mobile" title="{!! ucwords(str_replace('-',' ',$currentCategory)) !!}">{!! ucwords(str_replace('-',' ',$currentCategory)) !!}</span>
                             <i class="ml-2 fa fa-chevron-down text-xs"></i>
                         </button>
 
@@ -147,22 +154,23 @@
                                 @endphp
                                 <div class="flex items-center justify-between">
                                     <a href="{{ route('docs', ['category' => $slug]) }}"
-                                    class="flex-grow px-3 py-2 text-sm font-medium {{ $isActive ? 'bg-gray-100 text-gray-800' : 'text-gray-700 hover:bg-gray-50' }}"
+                                    class="flex-grow px-3 py-2 text-sm font-medium {{ $isActive ? 'bg-gray-100 text-gray-800' : 'text-gray-700 hover:bg-gray-50' }} header-dropdown-item-text"
                                     data-category-key="{{ $slug }}"
-                                    data-category-name="{{ $cats }}">
+                                    data-category-name="{{ $cats }}"
+                                    title="{!! ucwords(str_replace('-',' ',$cats)) !!}">
                                     {!! ucwords(str_replace('-',' ',$cats)) !!}
                                     </a>
                                     @auth
                                         @if(auth()->user()->role === 'admin')
                                             <div class="flex-shrink-0 flex items-center space-x-1 pr-2">
-                                                <button type="button" onclick="openCategoryModal('edit', '{{ $slug }}', '{{ $cats }}')" title="Edit Kategori" class="text-blue-500 hover:text-blue-700 p-1">
+                                                <button type="button" onclick="openCategoryModal('edit', '{{ $cats }}', '{{ $slug }}')" title="Edit Kategori" class="text-blue-500 hover:text-blue-700 p-1">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
                                                 {{-- Only allow deleting non-default categories --}}
                                                 @if($slug !== 'epesantren')
                                                     <button type="button" onclick="confirmDeleteCategory('{{ $slug }}', '{{ Str::headline($cats) }}')" title="Hapus Kategori" class="text-red-500 hover:text-red-700 p-1">
                                                         <i class="fas fa-trash"></i>
-                                                    </button>                                             
+                                                    </button>                                        
                                                 @endif
                                             </div>
                                         @endif
@@ -173,7 +181,7 @@
                                 @if(auth()->user()->role === 'admin')
                                     <div class="border-t border-gray-200 my-1"></div>
                                     
-                                    <button onclick="openCategoryModal()" class="text-blue-600 hover:underline text-sm" style="padding:10px;">
+                                    <button onclick="openCategoryModal('create', '', '')" class="text-blue-600 hover:underline text-sm" style="padding:10px;">
                                         + Tambah Kategori
                                     </button>
                                 @endif
@@ -213,7 +221,7 @@
                     ])
                 </nav>
                 <div class="relative lg:hidden header-spacer-right space-x-4 flex items-center">
-                                                    <form method="POST" action="{{ route('logout') }}">
+                                         <form method="POST" action="{{ route('logout') }}">
                         @auth
                             @csrf
                             <button type="submit"
@@ -416,6 +424,10 @@
     // Variabel global untuk instance CKEditor
     let currentEditorInstance;
 
+    // Variabel global untuk modal element (diakses di fungsi openMenuModal)
+    let modalTitleElement = document.getElementById('modal-title');
+    let categoryModal = document.getElementById('categoryModal'); // Deklarasikan secara global
+
     // Fungsi untuk menampilkan notifikasi toast
     function showNotification(message, type = 'success', duration = 3000) {
         const container = document.getElementById('notification-container');
@@ -521,12 +533,12 @@
     }
 
     // Fungsi untuk membuka modal kategori (dipanggil via onclick)
-    function openCategoryModal(mode = 'create', defaultName = '') {
-        const categoryModal = document.getElementById('categoryModal');
+    function openCategoryModal(mode = 'create', defaultName = '', originalCategorySlug = '') {
         const categoryForm = document.getElementById('categoryForm');
         const categoryModalTitle = document.getElementById('categoryModalTitle');
+        const formOriginalCategorySlug = document.getElementById('form_original_category_slug'); // NEW
 
-        if (!categoryForm || !categoryModalTitle) {
+        if (!categoryForm || !categoryModalTitle || !categoryModal) { // Tambahkan categoryModal di sini
             showNotification('Form kategori tidak ditemukan!', 'error'); // Menggunakan notifikasi global
             return;
         }
@@ -534,6 +546,7 @@
         categoryForm.reset();
         document.getElementById('form_category_method').value = mode === 'edit' ? 'PUT' : 'POST';
         document.getElementById('form_category_nama').value = defaultName;
+        formOriginalCategorySlug.value = originalCategorySlug; // Set original slug for edit
 
         categoryModalTitle.textContent = mode === 'edit' ? 'Edit Kategori' : 'Tambah Kategori';
         categoryModal.classList.remove('hidden');
@@ -573,7 +586,8 @@
                     hideNotification(loadingNotif);
                     if (data.success) {
                         showCentralSuccessPopup(data.success);
-                        window.location.href = `/docs/epesantren`;
+                        // Arahkan kembali ke kategori default atau halaman utama setelah menghapus kategori
+                        window.location.href = `/docs/epesantren`; 
                     } else {
                         showNotification(data.message || 'Gagal menghapus kategori.', 'error');
                     }
@@ -664,30 +678,6 @@
         }
     }
 
-
-        function openCategoryModal(mode = 'create', defaultName = '') {
-            if (!categoryForm || !categoryModalTitle) {
-                alert('Form kategori tidak ditemukan!');
-                return;
-            }
-
-            categoryForm.reset();
-            document.getElementById('form_category_method').value = mode === 'edit' ? 'PUT' : 'POST';
-            document.getElementById('form_category_nama').value = defaultName;
-
-            categoryModalTitle.textContent = mode === 'edit' ? 'Edit Kategori' : 'Tambah Kategori';
-            categoryModal.classList.remove('hidden');
-        }
-
-        function closeCategoryModal() {
-            categoryModal.classList.add('hidden');
-        }
-
-        // Moved category form submission logic to general script block
-
-    </script>
-    
-    <script>
     document.addEventListener('DOMContentLoaded', () => {
         // =================================
         // Verifikasi Logout
@@ -830,16 +820,16 @@
             });
         }
             // --- FIX FOR CLEAR SEARCH INPUT BUTTON ---
-        // Add a click event listener to the clear button
-        if (clearSearchInputBtn) {
-            clearSearchInputBtn.addEventListener('click', () => {
-                searchOverlayInput.value = ''; // Clear the input field
-                searchOverlayInput.focus();    // Keep focus on the input for immediate re-typing
-                clearSearchInputBtn.classList.add('hidden'); // Hide the clear button
-                searchResultsList.innerHTML = '<p class="text-center text-gray-500 p-8">Mulai ketik untuk mencari...</p>'; // Reset search results display
-            });
-        }
-        // --- END FIX ---
+            // Add a click event listener to the clear button
+            if (clearSearchInputBtn) {
+                clearSearchInputBtn.addEventListener('click', () => {
+                    searchOverlayInput.value = ''; // Clear the input field
+                    searchOverlayInput.focus();    // Keep focus on the input for immediate re-typing
+                    clearSearchInputBtn.classList.add('hidden'); // Hide the clear button
+                    searchResultsList.innerHTML = '<p class="text-center text-gray-500 p-8">Mulai ketik untuk mencari...</p>'; // Reset search results display
+                });
+            }
+            // --- END FIX ---
 
 
         // =================================
@@ -1048,129 +1038,10 @@
                 const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
                 const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
                 const categoryForm = document.getElementById('categoryForm'); // Dapatkan elemen categoryForm
-                const categoryModalTitle = document.getElementById('categoryModalTitle'); // Dapatkan elemen categoryModalTitle
                 const deleteContentBtn = document.getElementById('delete-content-btn');
 
                 let menuToDelete = null;
-
-                // Category modal functions (already mostly correct, just ensuring scope)
-                // These are already defined globally above, no need to redefine them here.
-                // Re-added them for clarity on which functions are available.
-                function openCategoryModal(mode = 'create', defaultName = '') {
-                    if (!categoryForm || !categoryModalTitle) {
-                        showNotification('Form kategori tidak ditemukan!', 'error');
-                        return;
-                    }
-
-                    categoryForm.reset();
-                    document.getElementById('form_category_method').value = mode === 'edit' ? 'PUT' : 'POST';
-                    document.getElementById('form_category_nama').value = defaultName;
-
-                    categoryModalTitle.textContent = mode === 'edit' ? 'Edit Kategori' : 'Tambah Kategori';
-                    categoryModal.classList.remove('hidden');
-                }
-
-                function closeCategoryModal() {
-                    categoryModal.classList.add('hidden');
-                }
-                
-                // New function for category deletion confirmation (using SweetAlert2)
-                const confirmDeleteCategory = (categorySlug, categoryName) => {
-                    console.log('Fungsi confirmDeleteCategory dipanggil untuk:', categoryName); // Tambahkan ini
-                    Swal.fire({
-                        title: 'Yakin ingin menghapus kategori?',
-                        text: `Anda akan menghapus kategori "${categoryName}" beserta semua menu dan konten di dalamnya. Tindakan ini tidak dapat dibatalkan.`,
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonColor: '#d33',
-                        cancelButtonColor: '#3085d6',
-                        confirmButtonText: 'Ya, Hapus Kategori',
-                        cancelButtonText: 'Batal'
-                    }).then(async (result) => {
-                        if (result.isConfirmed) {
-                            console.log('Konfirmasi SweetAlert2: Dihapus!'); // Tambahkan ini
-                            const loadingNotif = showNotification('Menghapus kategori...', 'loading');
-                            try {
-                                const data = await fetchAPI(`/kategori/${categorySlug}`, {
-                                    method: 'DELETE',
-                                    headers: {
-                                        'X-CSRF-TOKEN': csrfToken,
-                                    }
-                                });
-                                hideNotification(loadingNotif);
-                                if (data.success) {
-                                    showCentralSuccessPopup(data.success);
-                                    // Redirect to the default category or home after deleting a category
-                                    window.location.href = `/docs/epesantren`;
-                                } else {
-                                    showNotification(data.message || 'Gagal menghapus kategori.', 'error');
-                                }
-                            } catch (error) {
-                                console.error('Error deleting category:', error);
-                                hideNotification(loadingNotif);
-                                showNotification(error.message || 'Terjadi kesalahan saat menghapus kategori.', 'error');
-                            }
-                        }
-                    });
-                };
-
-
-                // Category Form Submission
-                if (categoryForm) {
-                    categoryForm.addEventListener('submit', async function (e) {
-                        e.preventDefault();
-
-                        const loadingNotif = showNotification('Memproses kategori...', 'loading');
-
-                        const categoryNameInput = document.getElementById('form_category_nama');
-                        const categoryName = categoryNameInput.value;
-                        const method = document.getElementById('form_category_method').value;
-                        
-                        let url = '/kategori'; // For POST (create)
-                        let httpMethod = 'POST';
-
-                        if (method === 'PUT') {
-                            // When editing, the URL should include the original slug of the category being edited.
-                            // We're using `currentCategory` from Blade for this.
-                            url = `/kategori/${currentCategory}`;
-                            httpMethod = 'POST'; // Laravel route uses POST with _method PUT for updates
-                        }
-
-                        try {
-                            const options = {
-                                method: httpMethod,
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRF-TOKEN': csrfToken,
-                                },
-                                body: JSON.stringify({ category: categoryName }),
-                            };
-
-                            if (method === 'PUT') {
-                                options.headers['X-HTTP-Method-Override'] = 'PUT';
-                            }
-
-                            const data = await fetchAPI(url, options);
-                            
-                            hideNotification(loadingNotif);    
-                            if (data.success) {
-                                showCentralSuccessPopup(data.success);
-                                closeCategoryModal();
-                                // Redirect to the new category slug if it was an edit or new category
-                                const newSlug = data.new_slug || categoryName.toLowerCase().replace(/\s+/g, '-');
-                                window.location.href = `/docs/${newSlug}`;
-                            } else {
-                                showNotification(data.message || 'Gagal memproses kategori.', 'error');
-                            }
-                        } catch (error) {
-                            console.error('Error:', error);
-                            hideNotification(loadingNotif);
-                            showNotification(error.message || 'Terjadi kesalahan saat memproses kategori.', 'error');
-                        }
-                    });
-                }
-                
-
+                                
                 const openMenuModal = (mode, menuData = null, parentId = 0) => {
                     if (!menuForm || !modalTitleElement) {
                         showNotification('Elemen form menu tidak ditemukan.', 'error');
@@ -1185,7 +1056,7 @@
                     formMenuChildSelect.innerHTML = '<option value="0">Tidak Ada (Menu Utama)</option>';
 
                     const editingMenuId = mode === 'edit' && menuData ? menuData.menu_id : null;
-                    let parentApiUrl = `/api/navigasi/parents/${currentCategory}`;
+                    let parentApiUrl = `/api/navigasi/parents/{{ $currentCategory }}`; // Use $currentCategory from Blade
                     if (editingMenuId) {
                         parentApiUrl += `?editing_menu_id=${editingMenuId}`;
                     }
@@ -1248,7 +1119,7 @@
                         return;
                     }
                     try {
-                        const data = await fetchAPI(`/api/navigasi/all/${currentCategory}`);
+                        const data = await fetchAPI(`/api/navigasi/all/{{ $currentCategory }}`); // Use currentCategory
                         sidebarElement.innerHTML = data.html;
                         attachAdminEventListeners(); // Re-attach listeners after content update
                         initSidebarDropdown(); // Re-initialize dropdown logic
@@ -1312,14 +1183,13 @@
                         const categoryNameInput = document.getElementById('form_category_nama');
                         const categoryName = categoryNameInput.value;
                         const method = document.getElementById('form_category_method').value;
+                        const originalCategorySlug = document.getElementById('form_original_category_slug').value; // Get original slug
                         
                         let url = '/kategori'; // For POST (create)
                         let httpMethod = 'POST';
 
-                        const currentCategory = document.getElementById('form_category').value;
-
                         if (method === 'PUT') {
-                            url = `/kategori/${currentCategory}`;
+                            url = `/kategori/${originalCategorySlug}`; // Use original slug for PUT
                         }
 
                         try {
