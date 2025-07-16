@@ -3,29 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Your App</title>
+    <title>Login - E-Docs</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        /* Custom styles to use the Inter font */
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ asset('css/login.css') }}">
 </head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+<body class="flex items-center justify-center min-h-screen">
 
     <!-- Login Card -->
-    <div class="relative w-full max-w-md mx-auto bg-white rounded-2xl shadow-lg p-8 m-4">
+    <div id="login-card" class="relative w-full max-w-md mx-auto bg-white rounded-2xl shadow-lg p-8 m-4">
         
         <!-- Header -->
         <div class="text-center mb-8">
-            <h1 class="text-3xl font-bold text-gray-800">Welcome Back!</h1>
-            <p class="text-gray-500 mt-2">Please enter your details to sign in.</p>
+            <div class="logo">
+                <img src="{{ asset('img/logo-idw-fix.png')}}" alt="">
+            </div>
+            <h1 class="text-3xl font-bold text-gray-800">E - Docs</h1>
+            <p class="text-gray-500 mt-2">Silahkan masukkan email dan password anda</p>
         </div>
 
         <!-- Login Form -->
@@ -42,7 +40,7 @@
 
             <!-- Email Input -->
             <div class="mb-4">
-                <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Alamat Email:</label>
                 <input 
                     type="email" 
                     id="email" 
@@ -60,7 +58,7 @@
                     <label for="password" class="text-sm font-medium text-gray-700">Password</label>
                     <!-- Replace '#' with your password reset route -->
                     <a href="#" class="text-sm font-medium text-blue-600 hover:text-blue-500">
-                        Forgot password?
+                        Lupa password?
                     </a>
                 </div>
                 <input 
@@ -90,6 +88,7 @@
             <!-- Submit Button -->
             <div>
                 <button 
+                    id="login-button"
                     type="submit" 
                     class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-transform transform hover:scale-105 duration-300"
                 >
@@ -97,16 +96,6 @@
                 </button>
             </div>
 
-            <!-- Sign Up Link -->
-            <div class="text-center mt-8">
-                <p class="text-sm text-gray-600">
-                    Don't have an account? 
-                    <!-- Replace '#' with your register route -->
-                    <a href="#" class="font-medium text-blue-600 hover:text-blue-500">
-                        Sign up
-                    </a>
-                </p>
-            </div>
         </form>
     </div>
 
