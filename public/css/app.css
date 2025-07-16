@@ -278,105 +278,141 @@ body {
     display: flex;
     align-items: center;
     width: 100%;
+    gap: 1rem; /* Sesuaikan sesuai kebutuhan */
 }
 
-.header-spacer-left,
+/* === HEADER FLEX CONTAINER ADJUSTMENTS === */
+.header-spacer-left {
+    flex-grow: 0; /* Tidak tumbuh bebas */
+    flex-shrink: 1; /* Bisa menyusut */
+    flex-basis: auto; /* Lebar dasar berdasarkan konten */
+    display: flex; 
+    align-items: center;
+    min-width: 0; /* Penting untuk flex item agar menghormati batas konten */
+    padding-right: 0; /* Hapus padding kanan, gunakan gap pada parent */
+    /* Hapus max-width dari sini agar header-main-category-title bisa lebih fleksibel */
+    /* max-width: 300px; */ 
+}
+
 .header-spacer-right {
-    flex-grow: 1; /* Coba kembali ke flex-grow: 1, karena kita akan memberi flex-grow ke bagian search */
+    flex-grow: 0; /* Tidak tumbuh bebas */
+    flex-shrink: 0; /* Tidak menyusut */
+    flex-basis: auto; 
     display: flex;
     align-items: center;
     min-width: 0;
+    justify-content: flex-end; /* Memastikan isinya mepet kanan */
+    margin-left: auto; /* Dorong ke kanan sejauh mungkin */
+    gap: 1rem; /* Jarak antara Selamat Datang dan Logout */
 }
 
-.header-spacer-left {
-    justify-content: flex-start;
-}
-.header-spacer-right {
-    justify-content: flex-end;
-}
-
-/* Tambahkan kelas baru untuk kontainer tombol search */
 .search-button-wrapper {
-    flex-grow: 1; /* **PERUBAHAN PENTING: Beri flex-grow: 1 pada wrapper search** */
-    display: flex; /* Jadikan flex container untuk memusatkan tombol di dalamnya */
-    justify-content: center; /* Pusatkan tombol search di dalam wrappernya */
-    align-items: center;
-    min-width: 0; /* Pastikan bisa menyusut jika perlu */
-}
-/* CSS for the new delete confirmation modal */
-#delete-confirm-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
+    flex-grow: 1; /* Ambil ruang sisa */
+    flex-shrink: 1;
     display: flex;
-    justify-content: center;
+    justify-content: center; /* Pusat tombol pencarian */
     align-items: center;
-    z-index: 6000; /* Higher than other modals */
-    visibility: hidden;
-    opacity: 0;
-    transition: visibility 0s, opacity 0.3s;
+    min-width: 0; 
+    padding: 0; /* Hapus padding, gunakan margin-left/right auto atau max-width */
+    max-width: 400px; /* Batasi lebar maksimum tombol pencarian */
 }
-#delete-confirm-modal.show {
-    visibility: visible;
-    opacity: 1;
-}
-#delete-confirm-modal-content {
-    background-color: white;
-    padding: 2rem;
-    border-radius: 0.5rem;
-    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
-    width: 90%;
-    max-width: 450px;
-    text-align: center;
-    transform: translateY(-50px);
-    transition: transform 0.3s ease-out;
-}
-#delete-confirm-modal.show #delete-confirm-modal-content {
-    transform: translateY(0);
+/* === END HEADER FLEX CONTAINER ADJUSTMENTS === */
+
+/* NEW: Utility class for truncating text with ellipsis */
+.truncate-text {
+    display: block; /* Penting untuk text-overflow */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;      
+    flex-grow: 1;      
+    flex-shrink: 1;    
 }
 
-/* Dropdown untuk Kategori di Header */
+/* Untuk nama kategori di judul paling kiri header */
+.header-main-category-title {
+    /* Ini adalah link <a> di dalam .header-spacer-left */
+    display: inline-flex; /* Tetap inline-flex untuk sejajar dengan mobile menu toggle */
+    align-items: center;
+    min-width: 0; /* SANGAT PENTING untuk flex item dalam flex container */
+    flex-shrink: 1; 
+    flex-basis: auto; 
+    /* NEW: Tambahkan max-width yang lebih spesifik di sini */
+    max-width: 200px; /* Sesuaikan nilai ini agar pas dengan lebar sidebar */
+    min-width: 200px;
+}
+
+
+/* header-spacer-left .relative (pembungkus tombol dropdown kategori) */
+.header-spacer-left .relative {
+    position: relative;
+    display: flex; 
+    align-items: center;
+    min-width: 200px; 
+    flex-shrink: 1; 
+    flex-basis: auto; 
+}
+
+
+/* Pembungkus dropdown kategori di header */
 .header-dropdown-menu {
     display: none;
     position: absolute;
-    background-color: white; /* Warna latar belakang putih */
-    min-width: 160px;
+    background-color: white;
+    min-width: 200px; 
+    max-width: 200px; 
     box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
-    z-index: 1;
+    z-index: 1000;
     border-radius: 0.5rem;
-    overflow: hidden;
-    top: 100%; /* Posisi di bawah tombol induk */
+    overflow: hidden; 
+    top: 100%;
     left: 0;
     margin-top: 0.5rem;
-    border: 1px solid #4a5568; /* Garis luar gelap (warna gray-700 dari Tailwind) */
+    border: 1px solid #e5e7eb;
+    padding: 4px 0;
 }
 
 .header-dropdown-menu.open {
     display: block;
 }
 
+/* Link di dalam dropdown kategori header */
 .header-dropdown-menu a {
-    color: black;
-    padding: 12px 16px;
+    color: #4b5563;
+    padding: 10px 16px;
     text-decoration: none;
-    display: block;
-    text-align: left;
+    display: flex; 
+    align-items: center;
+    justify-content: space-between;
+    font-size: 14px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    position: relative;
+    min-width: 0; 
+    flex-grow: 1; 
 }
+
 
 .header-dropdown-menu a:hover {
     background-color: #f1f1f1;
 }
 
-/* Kustomisasi untuk tombol dropdown Kategori */
+/* Untuk tombol dropdown kategori di header */
 #category-dropdown-btn {
-    background: linear-gradient(135deg, #4f46e5, #3b82f6); /* ungu ke biru */
+    flex-shrink: 0; 
+    width: 200px; 
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-sizing: border-box;
+    background: linear-gradient(135deg, #4f46e5, #3b82f6);
     color: #fff;
-    border: none;
     font-weight: 600;
+    border: none;
+    border-radius: 0.5rem;
     transition: background-color 0.3s ease, transform 0.2s ease;
+    padding: 8px 16px;
+    min-width: 0; 
+    flex-basis: auto; 
 }
 
 #category-dropdown-btn:hover {
@@ -384,36 +420,19 @@ body {
     transform: translateY(-1px);
 }
 
-/* Dropdown menu */
-#category-dropdown-menu {
-    background-color: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-    padding: 4px 0;
-}
-
-/* Link dalam dropdown */
-#category-dropdown-menu a {
-    padding: 10px 16px;
-    display: block;
-    font-size: 14px;
-    color: #4b5563;
-    text-decoration: none;
-    transition: background-color 0.2s ease, color 0.2s ease;
-    position: relative;
-}
-
-#category-dropdown-menu a:hover {
-    background-color: #f3f4f6;
-    color: #111827;
+/* Teks di dalam tombol dropdown kategori header */
+#category-dropdown-btn #category-button-text {
+    flex-grow: 1; 
+    min-width: 0; 
+    /* white-space, overflow, text-overflow ditangani oleh .truncate-text */
 }
 
 #category-dropdown-btn .fa-chevron-down,
 #category-dropdown-btn .fa-chevron-up {
-    margin-left: 8px; /* Jarak antara teks dan ikon */
-    font-size: 0.75rem; /* Ukuran ikon lebih kecil */
+    margin-left: 8px; 
+    font-size: 0.75rem; 
     transition: transform 0.2s ease-in-out;
+    flex-shrink: 0; 
 }
 
 /* Aktif state */
@@ -495,14 +514,14 @@ body {
     }
 
     .search-button-wrapper {
-        max-width: auto;
-        justify-content: flex-end;
+        max-width: auto; /* Jangan batasi di sini untuk mobile */
+        justify-content: flex-end; /* Mobile: ke kanan */
         align-content: flex-end;
         align-items: flex-end;
     }
 
     .text-search {
-        display: none;
+        display: none; /* Sembunyikan teks "Cari menu & konten..." di mobile */
         max-width: 0;
     }
 
@@ -521,7 +540,7 @@ body {
     }
     #search-icon {
         background-color: none;
-        flex-grow: 1;
+        flex-grow: 1; /* Ikon ambil ruang */
     }
     #open-search-modal-btn-header {
         align-items: center;
