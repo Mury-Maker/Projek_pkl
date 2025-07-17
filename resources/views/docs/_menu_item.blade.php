@@ -118,7 +118,7 @@
                     aria-expanded="false"
                     aria-controls="submenu-{{ $item->menu_id }}"
                     aria-label="Toggle submenu for {{ $item->menu_nama }}">
-                    <i class="fas fa-chevron-left transition-transform duration-300"></i>
+                    <i class="fas fa-chevron-left transition-transform duration-200"></i>
                 </button>
                 @else
                     <span class="p-2"></span> {{-- Placeholder kosong agar tinggi tetap sama --}}

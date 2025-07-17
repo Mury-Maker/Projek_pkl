@@ -28,7 +28,8 @@ function showNotification(message, type = 'success', duration = 3000) {
     let delayBeforeShow = 0;
 
     if (type === 'success') {
-        iconClass = 'fa-solid fa-check-circle text-green-700';
+        iconClass = 'fa-solid fa-check-circle text-green';
+        timeoutDuration = 3000000000; // Default 3 seconds
     } else if (type === 'error') {
         iconClass = 'fa-solid fa-times-circle text-red-700';
     } else if (type === 'loading') {
