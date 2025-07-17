@@ -56,69 +56,79 @@ class DocumentationController extends Controller
         if (!Auth::check()) {
             return redirect()->route('login');
         }
-
+    
         $categories = NavMenu::select('category')
             ->whereNotNull('category')
             ->distinct()
             ->pluck('category');
-
+    
         $allMenus = NavMenu::where('category', $category)->orderBy('menu_order')->get();
         $navigation = NavMenu::buildTree($allMenus);
-
+    
+        // Jika belum ada page (slug)
         if (is_null($page)) {
-            $firstMenuInCat = $allMenus->where('menu_child', 0)->sortBy('menu_order')->first();
-
-            if ($firstMenuInCat && trim($firstMenuInCat->menu_nama) !== '') {
-                $pageSlug = Str::slug($firstMenuInCat->menu_nama);
-                if ($pageSlug !== '') {
+            // Cari menu parent dengan menu_status = 1
+            $parentMenus = $allMenus->where('menu_child', 0)->where('menu_status', 1);
+    
+            foreach ($parentMenus as $menu) {
+                $hasContent = DocsContent::where('menu_id', $menu->menu_id)->exists();
+                if ($hasContent) {
                     return redirect()->route('docs', [
                         'category' => $category,
-                        'page' => $pageSlug,
+                        'page' => Str::slug($menu->menu_nama)
                     ]);
                 }
             }
-
+    
+            // Jika tidak ada parent menu yang punya konten, cari child menu teratas yang punya konten dan status aktif
+            $childMenus = $allMenus->where('menu_child', '!=', 0)->where('menu_status', 1);
+    
+            foreach ($childMenus as $menu) {
+                $hasContent = DocsContent::where('menu_id', $menu->menu_id)->exists();
+                if ($hasContent) {
+                    return redirect()->route('docs', [
+                        'category' => $category,
+                        'page' => Str::slug($menu->menu_nama)
+                    ]);
+                }
+            }
+    
+            // Fallback kalau tidak ada konten sama sekali
             return $this->renderNoContentFallback($category, $navigation);
         }
-
+    
+        // ===================== Jika page sudah ditentukan =========================
         $selectedNavItem = $allMenus->first(function ($menu) use ($page) {
             return Str::slug($menu->menu_nama) === $page;
         });
-
+    
         if (!$selectedNavItem) {
             abort(404, 'Halaman dokumentasi tidak ditemukan.');
         }
-
+    
         $menuId = $selectedNavItem->menu_id;
         $contentDocs = null;
         $contentTypes = [];
-        $activeContentType = request()->query('content_type', 'Default'); // Get active content type from query parameter
-
-        // Fetch all content types for this menu_id
+        $activeContentType = request()->query('content_type', 'Default');
+    
         $docsContents = DocsContent::where('menu_id', $menuId)->get();
-
+    
         if ($docsContents->isNotEmpty()) {
-            // Check if it's a child menu with multiple content types
             if ($selectedNavItem->menu_child !== 0) {
-                // Assuming UAT, Pengkodean, Database are the expected titles
                 $contentTypes = $docsContents->pluck('title')->toArray();
-                // Set contentDocs based on activeContentType from query parameter
                 $contentDocs = $docsContents->firstWhere('title', $activeContentType);
-                // Fallback to the first available content if activeContentType is not found
                 if (!$contentDocs) {
                     $contentDocs = $docsContents->first();
                 }
-            } else { // It's a top-level menu or a menu with only 'Default' content
+            } else {
                 $contentDocs = $docsContents->firstWhere('title', 'Default');
             }
         }
-        
-        // Ensure $contentDocs is an object with content, even if null was found
+    
         if (!$contentDocs) {
             $contentDocs = (object)['content' => null, 'title' => $activeContentType];
         }
-
-
+    
         return view('docs.index', [
             'title'             => ucfirst($selectedNavItem->menu_nama) . ' - Dokumentasi ' . Str::headline($category),
             'navigation'        => $navigation,
@@ -127,12 +137,12 @@ class DocumentationController extends Controller
             'selectedNavItem'   => $selectedNavItem,
             'menu_id'           => $menuId,
             'allParentMenus'    => NavMenu::where('category', $category)->orderBy('menu_nama')->get(['menu_id', 'menu_nama']),
-            'contentDocs'       => $contentDocs, // Pass the initially active content
-            'allDocsContents'   => $docsContents, // Pass all contents for the tabs/selection
-            'contentTypes'      => $contentTypes, // Pass the available content types
+            'contentDocs'       => $contentDocs,
+            'allDocsContents'   => $docsContents,
+            'contentTypes'      => $contentTypes,
             'categories'        => $categories
         ]);
-    }
+    }    
 
     private function renderNoContentFallback($category, $navigation): View
     {

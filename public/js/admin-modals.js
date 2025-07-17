@@ -15,12 +15,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const categoryForm = document.getElementById('categoryForm');
     const categoryModal = document.getElementById('categoryModal');
     const categoryModalTitle = document.getElementById('categoryModalTitle');
-    // const deleteContentBtn = document.getElementById('delete-content-btn'); // Moved to editor-logic if it's content specific
 
     let menuToDelete = null;
     const modalTitleElement = document.getElementById('modal-title');
-    const formCategoryElement = document.getElementById('form_category');
-    const currentCategory = formCategoryElement ? formCategoryElement.value : 'epesantren';
+    const currentCategory = window.initialBladeData && window.initialBladeData.currentCategory 
+                            ? window.initialBladeData.currentCategory 
+                            : 'epesantren'; // Fallback default
+
+    const mainContentTitleElement = document.getElementById('main-content-title'); 
 
     const openMenuModal = async (mode, menuData = null, parentId = 0) => {
         if (!menuForm || !modalTitleElement) {
@@ -29,7 +31,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         menuForm.reset();
-        document.getElementById('form_menu_id').value = '';
+        // Pastikan ID input hidden untuk menu_id adalah 'form_menu_id'
+        document.getElementById('form_menu_id').value = ''; 
+        // Pastikan ID input hidden untuk method adalah 'form_method'
         document.getElementById('form_method').value = mode === 'edit' ? 'PUT' : 'POST';
 
         const formMenuChildSelect = document.getElementById('form_menu_child');
@@ -52,6 +56,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (mode === 'create') {
                 modalTitleElement.textContent = 'Tambah Menu Baru';
+                document.getElementById('form_menu_nama').value = '';
+                document.getElementById('form_menu_icon').value = '';
+                document.getElementById('form_menu_order').value = '0';
                 formMenuChildSelect.value = parentId;
                 document.getElementById('form_menu_status').checked = false;
             } else if (mode === 'edit' && menuData) {
@@ -98,11 +105,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         try {
-            // Use initialBladeData.currentCategory for refresh
-            const data = await fetchAPI(`/api/navigasi/all/${initialBladeData.currentCategory}`);
+            const data = await fetchAPI(`/api/navigasi/all/${currentCategory}`);
             sidebarElement.innerHTML = data.html;
-            attachAdminEventListeners(); // Re-attach listeners after content update
-            window.initSidebarDropdown(); // Re-initialize dropdown logic from category-dropdown.js
+            attachAdminEventListeners();
+            window.initSidebarDropdown();
         } catch (error) {
             showNotification('Gagal memuat ulang sidebar.', 'error');
             console.error('Error reloading sidebar:', error);
@@ -167,12 +173,8 @@ document.addEventListener('DOMContentLoaded', () => {
             let url = '/kategori'; // For POST (create)
             let httpMethod = 'POST';
 
-            // currentCategory should be pulled from initialBladeData
-            const currentCategoryForForm = initialBladeData.currentCategory;
-
-
             if (method === 'PUT') {
-                url = `/kategori/${currentCategoryForForm}`; // Use the actual category slug being edited
+                url = `/kategori/${currentCategory}`;
                 httpMethod = 'PUT';
             }
 
@@ -191,11 +193,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 const data = await fetchAPI(url, options);
+
+                hideNotification(loadingNotif);
                 
-                hideNotification(loadingNotif);    
+                // closeMenuModalAdmin(); // Ini salah, seharusnya closeCategoryModal
+                window.closeCategoryModal(); // Panggil fungsi penutup modal kategori
+
                 if (data.success) {
                     showCentralSuccessPopup(data.success);
-                    closeCategoryModal();
+                    // Redirect ke kategori baru jika sukses
                     const newSlug = data.new_slug || categoryName.toLowerCase().replace(/\s+/g, '-');
                     window.location.href = `/docs/${newSlug}`;
                 } else {
@@ -203,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch (error) {
                 console.error('Error:', error);
-                hideNotification(loadingNotif);    
+                hideNotification(loadingNotif);
                 showNotification(error.message || 'Terjadi kesalahan saat memproses kategori.', 'error');
             }
         });
@@ -212,48 +218,140 @@ document.addEventListener('DOMContentLoaded', () => {
     if (menuForm) {
         menuForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+    
             const loadingNotif = showNotification('Menyimpan menu...', 'loading');
+            console.log('Loading notification triggered:', loadingNotif);
 
             const formData = new FormData(menuForm);
-            const menuId = formData.get('menu_id');
-            const method = document.getElementById('form_method').value;
+            const method = document.getElementById('form_method').value; 
+            const newMenuNama = formData.get('form_menu_nama'); 
 
-            const dataToSend = {};
+            const dataToSend = {}; 
             formData.forEach((value, key) => {
-                if (key === 'menu_status') {
-                    dataToSend[key] = value === '1' ? 1 : 0;
+                if (key === 'form_menu_status') {
+                    dataToSend['menu_status'] = value === 'on' ? 1 : 0;
+                } else if (key.startsWith('form_')) {
+                    dataToSend[key.replace('form_', '')] = value;
                 } else {
                     dataToSend[key] = value;
                 }
             });
-
-            const url = menuId ? `/api/navigasi/${menuId}` : '/api/navigasi';
+            if (!dataToSend.category) {
+                dataToSend.category = currentCategory;
+            }
+            
+            const menuIdFromData = dataToSend.menu_id; 
+            const url = menuIdFromData ? `/api/navigasi/${menuIdFromData}` : '/api/navigasi'; 
+            
+            // ... (console.log debugging form submit Anda yang sebelumnya) ...
 
             const options = {
                 method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
                 body: JSON.stringify(dataToSend),
             };
-
+    
             if (method === 'PUT') {
-                options.headers = {
-                    ...options.headers,
-                    'X-HTTP-Method-Override': 'PUT'
-                };
+                options.headers['X-HTTP-Method-Override'] = 'PUT';
             }
-            
+    
             try {
-                const data = await fetchAPI(url, options);
-                
-                hideNotification(loadingNotif);    
+                const data = await fetchAPI(url, options); 
+                console.log('Respons Sukses dari Server (data objek penuh):', data); 
+    
+                console.log('Memanggil hideNotification untuk:', loadingNotif);
+                hideNotification(loadingNotif); 
+
+                console.log('Memanggil showCentralSuccessPopup dengan pesan:', data.success);
                 showCentralSuccessPopup(data.success);
                 
-                closeMenuModalAdmin();
-                refreshSidebar();
-            } catch (error) {
-                console.error('Error saving menu:', error);
-                hideNotification(loadingNotif);    
+                closeMenuModalAdmin(); 
+
+                // --- LOGIKA UPDATE FRONTEND TANPA REFRESH ---
+                // Dapatkan content_type saat ini dari URL jika ada
+                const urlParams = new URLSearchParams(window.location.search);
+                const currentContentType = urlParams.get('content_type') || 'Default'; 
+
+                // --- DEBUGGING isCurrentMenuOpened ---
+                console.log('Nilai data.menu_id (dari respons sukses):', data.menu_id);
+                console.log('Nilai window.initialBladeData:', window.initialBladeData);
+                console.log('Nilai window.initialBladeData.selectedNavItemId:', window.initialBladeData ? window.initialBladeData.selectedNavItemId : 'undefined');
+
+                const isCurrentMenuOpened = true; 
+                console.log('Hasil isCurrentMenuOpened:', isCurrentMenuOpened);
+                // --- AKHIR DEBUGGING isCurrentMenuOpened ---
+
+                // 1. Update Judul di Halaman Konten (jika menu ini sedang dibuka DAN menu_status=1)
+                if (mainContentTitleElement && data.menu_status == 1 && isCurrentMenuOpened) {
+                    let newTitleText = data.new_menu_nama;
+                    if (currentContentType !== 'Default') { 
+                        newTitleText;
+                    }
+                    mainContentTitleElement.textContent = newTitleText;
+                    console.log('Judul konten diperbarui.');
+                } else {
+                    console.log('Judul konten TIDAK diperbarui karena kondisi tidak terpenuhi.');
+                    console.log('mainContentTitleElement:', mainContentTitleElement);
+                    console.log('data.menu_status:', data.menu_status);
+                    console.log('isCurrentMenuOpened:', isCurrentMenuOpened);
+                }
+
+                // 2. Update URL di Address Bar (jika menu ini sedang dibuka DAN menu_status=1)
+                if (data.menu_status == 1 && isCurrentMenuOpened) {
+                    const newUrl = `/docs/${data.current_category}/${data.new_menu_link}?content_type=${currentContentType}`;
+                    if (window.location.href !== newUrl) { 
+                        history.pushState(null, '', newUrl);
+                        console.log('URL address bar diperbarui ke:', newUrl);
+                    } else {
+                        console.log('URL address bar tidak perlu diperbarui (sudah sama atau kondisi tidak terpenuhi).');
+                    }
+                } else {
+                    console.log('URL address bar TIDAK diperbarui karena kondisi tidak terpenuhi.');
+                    console.log('data.menu_status:', data.menu_status);
+                    console.log('isCurrentMenuOpened:', isCurrentMenuOpened);
+                }
+
+                // 3. Update Link di Sidebar Navigasi secara parsial
+                const $updatedLink = document.querySelector(`a[data-menu-id="${data.menu_id}"]`);
+                const $updatedDiv = document.querySelector(`div[data-toggle="submenu-${data.menu_id}"]`);
                 
+                if ($updatedLink || $updatedDiv) {
+                    const targetElement = $updatedLink ? $updatedLink.querySelector('span') : ($updatedDiv ? $updatedDiv.querySelector('span') : null);
+                    if (targetElement) {
+                        targetElement.textContent = data.new_menu_nama;
+                        console.log('Teks menu di sidebar diperbarui.');
+                    }
+
+                    if ($updatedLink) {
+                        let newHrefForSidebar = `/docs/${data.current_category}/${data.new_menu_link}`;
+                        if (data.menu_status === 1) {
+                            newHrefForSidebar += `?content_type=${currentContentType}`; 
+                        }
+                        $updatedLink.setAttribute('href', newHrefForSidebar);
+                        $updatedLink.setAttribute('data-menu-link', data.new_menu_link);
+                        console.log('Href link sidebar diperbarui ke:', newHrefForSidebar);
+                    }
+                    
+                    const oldMenuStatusFromForm = dataToSend.menu_status; 
+                    const oldMenuChildFromForm = dataToSend.menu_child; 
+
+                    if (data.menu_status != oldMenuStatusFromForm || data.menu_child != oldMenuChildFromForm) {
+                         console.log("Perubahan status/child terdeteksi, merefresh sidebar penuh.");
+                         refreshSidebar();
+                    }
+                } else {
+                    console.warn("Link menu tidak ditemukan di sidebar atau perubahan struktur kompleks, melakukan refresh sidebar penuh.");
+                    refreshSidebar();
+                }
+
+            } catch (error) {
+                console.error('Kesalahan saat menyimpan menu:', error);
+                if (loadingNotif) {
+                     hideNotification(loadingNotif); 
+                }
                 if (error.message) {
                     showNotification(`Gagal menyimpan: ${error.message}`, 'error');
                 } else {
@@ -261,7 +359,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
-    }
+    } 
 
     if (cancelDeleteBtn) {
         cancelDeleteBtn.addEventListener('click', closeDeleteConfirmModal);
@@ -279,20 +377,27 @@ document.addEventListener('DOMContentLoaded', () => {
                     showCentralSuccessPopup(data.success);
                     
                     closeDeleteConfirmModal();
-                    refreshSidebar();
+                    // refreshSidebar(); // Ini akan direplace dengan redirect
+                    
+                    // === PERUBAHAN DI SINI ===
+                    if (data.redirect_url) {
+                        window.location.href = data.redirect_url; // Mengalihkan ke URL yang diberikan backend
+                    } else {
+                        refreshSidebar(); // Fallback jika redirect_url tidak ada (jarang terjadi)
+                    }
+                    // =========================
+
                 } catch (error) {
                     hideNotification(deleteLoadingNotif);    
                     showNotification(`Gagal menghapus: ${error.message || 'Terjadi kesalahan'}`, 'error');
-                    console.error('Error deleting menu:', error);
+                    console.error('Kesalahan menghapus menu:', error);
                     closeDeleteConfirmModal();
                 }
             }
         });
     }
     
-    // Moved to global-utils.js, exposed via window.openCategoryModal and window.closeCategoryModal
-    // These functions should ideally be moved out of here or re-evaluated for access.
-    // Making them global for now as they are called from Blade onclick.
+    // Global functions (ensure these are indeed global or accessible)
     window.openCategoryModal = (mode = 'create', defaultName = '') => {
         if (!categoryForm || !categoryModalTitle) {
             showNotification('Form kategori tidak ditemukan!', 'error');
@@ -313,7 +418,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Function for category delete confirmation (called via onclick)
     window.confirmDeleteCategory = (categorySlug, categoryName) => {
         console.log('confirmDeleteCategory function called for:', categoryName, 'with slug:', categorySlug);
         Swal.fire({
