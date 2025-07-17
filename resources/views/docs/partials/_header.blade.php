@@ -5,6 +5,11 @@
             {{-- Bagian Kiri Header (Logo + Kategori) --}}
             <div class="header-spacer-left space-x-8">
 
+                {{-- Logo --}}
+                <a href="{{ route('docs', ['category' => $currentCategory]) }}">
+                    <img src="{{ asset('img/indoweb.png') }}" alt="Logo" class="h-10 w-auto">
+                </a>
+
                 <button id="mobile-menu-toggle" class="md:hidden text-gray-600 focus:outline-none focus:text-gray-900">
                     <i class="fas fa-bars fa-lg"></i>
                 </button>

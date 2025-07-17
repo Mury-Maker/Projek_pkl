@@ -12,13 +12,10 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
 
+
     {{-- CKEditor CSS hanya dimuat jika user adalah admin --}}
-    @auth
-        @if(auth()->user()->role === 'admin')
-            <link rel="stylesheet" href="{{ asset('ckeditor/style.css') }}">
-            <link rel="stylesheet" href="https://cdn.ckeditor.com/ckeditor5/45.2.1/ckeditor5.css" crossorigin>
-        @endif
-    @endauth
+    <link rel="stylesheet" href="{{ asset('ckeditor/style.css') }}">
+    <link rel="stylesheet" href="https://cdn.ckeditor.com/ckeditor5/45.2.1/ckeditor5.css" crossorigin>
 </head>
 <body class="bg-gray-100">
     <div class="flex h-screen flex-col">
@@ -27,12 +24,17 @@
 
         <div class="flex flex-1 overflow-hidden">
             {{-- Sidebar --}}
-            @include('docs.partials._sidebar')
+            {{-- Pastikan _sidebar menerima selectedNavItemId dan currentCategory --}}
+            @include('docs.partials._sidebar', [
+                'currentCategory' => $currentCategory ?? 'epesantren',
+                'selectedNavItemId' => $menu_id ?? null // Ini adalah ID menu yang sedang aktif
+            ])
 
             {{-- Main Content --}}
             <main class="flex-1 overflow-y-auto p-8 lg:p-12 relative" style="background-color: white">
                 <div class="judul-halaman">
-                    <h1> {!! ucfirst(Str::headline($currentPage)) !!}
+                    {{-- BERIKAN ID PADA H1 INI --}}
+                    <h1 id="main-content-title"> {!! ucfirst(Str::headline($currentPage)) !!}
                     </h1>
                     @auth
                         @if(auth()->user()->role === 'admin')
@@ -119,6 +121,7 @@
     <script src="{{ asset('js/search-logic.js') }}"></script>
     <script src="{{ asset('js/category-dropdown.js') }}"></script>
     <script src="{{ asset('js/editor-logic.js') }}"></script>
+    <script src="{{ asset('js/logout-form.js') }}"></script>
 
     @auth
         @if(auth()->user()->role === 'admin')
@@ -127,14 +130,14 @@
     @endauth
 
     <script>
-        // Data passed from Blade to JavaScript
-        const initialBladeData = {
-            allDocsContents: @json($allDocsContents ?? []),
-            currentCategory: "{{ $currentCategory ?? 'epesantren' }}",
-            menu_id: {{ $menu_id ?? 0 }},
-            currentPage: "{{ $currentPage ?? 'no-content-available' }}",
-            csrfToken: document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        window.initialBladeData = {
+            selectedNavItemId: {{ $selectedNavItemId ?? 'null' }},
+            currentPage: "{{ $currentPage ?? '' }}",
+            currentCategory: "{{ $currentCategory ?? '' }}",
+            menu_id: {{ $menu_id ?? 'null' }},
+            allDocsContents: {!! json_encode($allDocsContents ?? []) !!}
         };
     </script>
+    
 </body>
 </html>
