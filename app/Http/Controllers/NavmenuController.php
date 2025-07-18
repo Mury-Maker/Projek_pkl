@@ -12,6 +12,7 @@ use Illuminate\Support\Str;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\Rule;
 
 class NavmenuController extends Controller
 {
@@ -104,17 +105,29 @@ class NavmenuController extends Controller
             'menu_icon' => 'nullable|string|max:30',
             'menu_status' => 'boolean',
         ]);
-    
+
         // Cek apakah menu dengan nama dan kategori yang sama sudah ada
+        // Menggunakan validasi unique Laravel lebih disarankan untuk konsistensi
+        // 'unique:nav_menus,menu_nama,NULL,id,category,' . $request->category,
+        // Namun, jika Anda ingin tetap menggunakan cara manual ini, pastikan responsnya sama dengan validasi Laravel
         $menuExists = NavMenu::where('menu_nama', $request->menu_nama)
             ->where('category', $request->category)
             ->exists();
-    
+
         if ($menuExists) {
-            return response()->json(['error' => 'Nama menu sudah digunakan dalam kategori ini!'], 422);
+            // Mengembalikan respons error validasi yang konsisten dengan Laravel
+            return response()->json([
+                'message' => 'The given data was invalid.',
+                'errors' => [
+                    'menu_nama' => ['Nama menu sudah digunakan dalam kategori ini!']
+                ]
+            ], 422);
         }
-    
-        DB::transaction(function () use ($request) {
+
+        // Variabel untuk menyimpan instance menu yang baru dibuat agar bisa diakses di luar transaction
+        $newlyCreatedMenu = null;
+
+        DB::transaction(function () use ($request, &$newlyCreatedMenu) { // Gunakan '&' untuk pass-by-reference
             $menu = NavMenu::create([
                 'menu_nama' => $request->menu_nama,
                 'menu_link' => Str::slug($request->menu_nama),
@@ -124,47 +137,62 @@ class NavmenuController extends Controller
                 'menu_status' => $request->has('menu_status') ? 1 : 0,
                 'category' => $request->category,
             ]);
-    
+
+            $newlyCreatedMenu = $menu; // Simpan instance menu yang baru dibuat
+
+            // --- START: Logika pembuatan DocsContent yang disamakan dengan update ---
             if ($menu->menu_status == 1) {
-                if ($menu->menu_child !== 0) {
-                    $contentTypes = ['UAT', 'Pengkodean', 'Database'];
-                    foreach ($contentTypes as $type) {
-                        DocsContent::firstOrCreate(
-                            ['menu_id' => $menu->menu_id, 'title' => $type],
-                            ['content' => '# ' . $request->menu_nama . ' - ' . $type . "\n\nBelum ada konten untuk halaman ini. Silakan edit untuk menambahkan."]
-                        );
-                    }
-                } else {
-                    DocsContent::firstOrCreate(
-                        ['menu_id' => $menu->menu_id, 'title' => 'Default'],
-                        ['content' => '# ' . $request->menu_nama . "\n\nBelum ada konten untuk halaman ini. Silakan edit untuk menambahkan."]
-                    );
+                $contentTypesToManage = ['UAT', 'Pengkodean', 'Database'];
+                $defaultContentPlaceholder = "\n\nBelum ada konten untuk halaman ini. Silakan edit untuk menambahkan.";
+
+                foreach ($contentTypesToManage as $type) {
+                    DocsContent::create([ // Gunakan create karena ini menu baru, tidak perlu firstOrCreate
+                        'menu_id' => $menu->menu_id,
+                        'title' => $type,
+                        'content' => '# ' . $request->menu_nama . ' - ' . $type . $defaultContentPlaceholder,
+                    ]);
                 }
             }
+            // --- END: Logika pembuatan DocsContent yang disamakan dengan update ---
         });
-    
-        return response()->json(['success' => 'Menu berhasil ditambahkan!']);
-    }       
+
+        // --- PENTING: Pastikan semua data ini dikembalikan ---
+        // Mengembalikan data dari $newlyCreatedMenu yang sudah diinisialisasi di dalam transaction
+        return response()->json([
+            'success' => 'Menu berhasil ditambahkan!',
+            'menu_id' => $newlyCreatedMenu->menu_id,
+            'new_menu_nama' => $newlyCreatedMenu->menu_nama,
+            'new_menu_link' => $newlyCreatedMenu->menu_link,
+            'current_category' => $newlyCreatedMenu->category,
+            'menu_status' => $newlyCreatedMenu->menu_status,
+        ], 201); // Menggunakan status 201 Created untuk resource baru
+    }      
 
     /**
      * Memperbarui menu yang ada.
      */
     public function update(Request $request, NavMenu $navMenu)
     {
-        // --- START: Perubahan Validasi untuk menu_nama unik ---
+        // --- START: Perubahan Validasi untuk menu_nama unik (DENGAN SCOPE KATEGORI) ---
         $request->validate([
             'menu_nama' => [
                 'required',
                 'string',
                 'max:50',
-                // Aturan unique: Cek tabel 'nav_menus' pada kolom 'menu_nama',
-                // tetapi abaikan baris yang sedang di-update (dengan menu_id saat ini).
-                'unique:navmenu,menu_nama,' . $navMenu->menu_id . ',menu_id',
+                // Menggunakan Rule::unique dengan kondisi where untuk category
+                // Ini akan memeriksa keunikan menu_nama HANYA dalam category yang sama,
+                // dan mengabaikan record yang sedang di-update.
+                Rule::unique('navmenu', 'menu_nama')
+                    ->where(function ($query) use ($request) {
+                        return $query->where('category', $request->category);
+                    })
+                    ->ignore($navMenu->menu_id, 'menu_id'),
             ],
             'menu_child' => 'required|integer',
-            'menu_order' => 'required|integer',
+            'menu_order' => 'required|integer', 
             'menu_icon' => 'nullable|string|max:30',
             'menu_status' => 'boolean',
+            'category' => 'required|string', // Pastikan category juga divalidasi
         ]);
         // --- END: Perubahan Validasi ---
 
@@ -192,8 +220,9 @@ class NavmenuController extends Controller
                 'menu_link' => $newMenuLink,
                 'menu_icon' => $request->menu_icon,
                 'menu_child' => $request->menu_child,
-                'menu_order' => $request->menu_order,
+                'menu_order' => $request->menu_order ?? 0, 
                 'menu_status' => $request->has('menu_status') ? 1 : 0,
+                'category' => $request->category, // Pastikan category juga diupdate jika perlu
             ]);
 
             $isNowContentMenu = $navMenu->menu_status == 1;
