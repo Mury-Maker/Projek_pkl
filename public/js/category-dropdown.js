@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Logic for sidebar dropdown (general user)
+    // === Sidebar Dropdown ===
     const sidebar = document.getElementById('sidebar-navigation');
 
     if (sidebar) {
@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initSidebarDropdown();
 
-    // Logic for Header Category Dropdown
+    // === Kategori Dropdown ===
     const categoryDropdownBtn = document.getElementById('category-dropdown-btn');
     const categoryDropdownText = document.getElementById('category-button-text');
     const categoryDropdownMenu = document.getElementById('category-dropdown-menu');
@@ -86,8 +86,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const categoryDropdownTextMobile = document.getElementById('category-button-text-mobile');
     const categoryDropdownMenuMobile = document.getElementById('category-dropdown-menu-mobile');
 
-    const currentCategoryFromBlade = initialBladeData.currentCategory; // Access from global data
-    
+    const currentCategoryFromBlade = initialBladeData.currentCategory;
+
+    const reorderCategoryMenu = (menuElement) => {
+        if (!menuElement) return;
+        const items = Array.from(menuElement.querySelectorAll('a')).filter(a =>
+            a.textContent.trim().toLowerCase() === 'epesantren'
+        );
+        if (items.length > 0) {
+            const epesantrenItem = items[0].closest('li') || items[0].parentElement;
+            if (epesantrenItem && epesantrenItem.parentElement) {
+                epesantrenItem.parentElement.insertBefore(epesantrenItem, epesantrenItem.parentElement.firstChild);
+            }
+        }
+    };
+
+    reorderCategoryMenu(categoryDropdownMenu);
+    reorderCategoryMenu(categoryDropdownMenuMobile);
+
     if (categoryDropdownBtn && categoryDropdownMenu) {
         categoryDropdownBtn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -131,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     }
-    
+
     if (categoryDropdownBtnMobile && categoryDropdownMenuMobile) {
         categoryDropdownBtnMobile.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -171,6 +187,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (chevronIcon) {
                     chevronIcon.classList.remove('fa-chevron-up');
                     chevronIcon.classList.add('fa-chevron-down');
+                }
+            });
+        });
+    }
+
+    // === Logout dengan SweetAlert ===
+    const logoutForm = document.getElementById('logout-form');
+    const logoutBtn = document.getElementById('logout-btn');
+
+    if (logoutForm && logoutBtn) {
+        logoutBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+
+            Swal.fire({
+                title: 'Yakin ingin keluar?',
+                text: 'Anda akan logout dari sistem.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Ya, Logout',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    logoutForm.submit();
                 }
             });
         });

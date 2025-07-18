@@ -47,7 +47,7 @@
                                 @auth
                                     @if(auth()->user()->role === 'admin')
                                         <div class="flex-shrink-0 flex items-center space-x-1 pr-2">
-                                            <button type="button" onclick="openCategoryModal('edit', '{{ $cats }}')" title="Edit Kategori" class="text-blue-500 hover:text-blue-700 p-1">
+                                            <button type="button" onclick="openCategoryModal('edit', '{{ $cats }}', '{{ $slug }}')" title="Edit Kategori" class="text-blue-500 hover:text-blue-700 p-1">
                                                 <i class="fas fa-edit"></i>
                                             </button>
                                             {{-- Only allow deleting non-default categories --}}

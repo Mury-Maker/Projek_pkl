@@ -5,6 +5,7 @@
         <form id="categoryForm">
             @csrf
             <input type="hidden" id="form_category_method" name="_method" value="POST">
+            <input type="hidden" id="form_category_slug_to_edit" name="category_slug_to_edit" value="">
 
             <div class="mb-4">
                 <label for="form_category_nama" class="block text-sm font-medium text-gray-700 mb-1">Nama Kategori</label>

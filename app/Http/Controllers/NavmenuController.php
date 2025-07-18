@@ -151,13 +151,22 @@ class NavmenuController extends Controller
      */
     public function update(Request $request, NavMenu $navMenu)
     {
+        // --- START: Perubahan Validasi untuk menu_nama unik ---
         $request->validate([
-            'menu_nama' => 'required|string|max:50',
+            'menu_nama' => [
+                'required',
+                'string',
+                'max:50',
+                // Aturan unique: Cek tabel 'nav_menus' pada kolom 'menu_nama',
+                // tetapi abaikan baris yang sedang di-update (dengan menu_id saat ini).
+                'unique:navmenu,menu_nama,' . $navMenu->menu_id . ',menu_id',
+            ],
             'menu_child' => 'required|integer',
             'menu_order' => 'required|integer',
             'menu_icon' => 'nullable|string|max:30',
             'menu_status' => 'boolean',
         ]);
+        // --- END: Perubahan Validasi ---
 
         if ($request->menu_child == $navMenu->menu_id) {
             return response()->json(['message' => 'Menu tidak bisa menjadi parent-nya sendiri.'], 422);
@@ -168,18 +177,19 @@ class NavmenuController extends Controller
             return response()->json(['message' => 'Tidak bisa mengatur sub-menu sebagai parent dari menu induknya.'], 422);
         }
 
-        // Ambil data lama sebelum diupdate
         $oldMenuNama = $navMenu->menu_nama;
-        $oldMenuLink = $navMenu->menu_link; // Penting untuk cek perubahan URL
+        $oldMenuLink = $navMenu->menu_link;
         $oldMenuStatus = $navMenu->menu_status;
         $oldMenuChild = $navMenu->menu_child;
 
-        DB::transaction(function () use ($request, $navMenu, $oldMenuNama, $oldMenuLink, $oldMenuStatus, $oldMenuChild) {
-            $newMenuLink = Str::slug($request->menu_nama); // Link baru berdasarkan nama baru
+        $defaultContentPlaceholder = "\n\nBelum ada konten untuk halaman ini. Silakan edit untuk menambahkan.";
+
+        DB::transaction(function () use ($request, $navMenu, $oldMenuNama, $oldMenuLink, $oldMenuStatus, $oldMenuChild, $defaultContentPlaceholder) {
+            $newMenuLink = Str::slug($request->menu_nama);
 
             $navMenu->update([
                 'menu_nama' => $request->menu_nama,
-                'menu_link' => $newMenuLink, // menu_link selalu diperbarui
+                'menu_link' => $newMenuLink,
                 'menu_icon' => $request->menu_icon,
                 'menu_child' => $request->menu_child,
                 'menu_order' => $request->menu_order,
@@ -189,75 +199,59 @@ class NavmenuController extends Controller
             $isNowContentMenu = $navMenu->menu_status == 1;
             $wasContentMenu = $oldMenuStatus == 1;
             $isNowChildMenu = $navMenu->menu_child !== 0;
+            $wasChildMenu = $oldMenuChild !== 0;
             $menuNamaChanged = ($request->menu_nama !== $oldMenuNama);
 
-            // Logika untuk mengelola konten saat menu diupdate
+            $contentTypesToManage = ['UAT', 'Pengkodean', 'Database'];
+
             if ($isNowContentMenu) {
-                // Tentukan konten default baru (tanpa pesan 'belum ada konten')
-                $newDefaultContentHeader = '';
-                if ($isNowChildMenu) {
-                    $contentTypes = ['UAT', 'Pengkodean', 'Database'];
-                    foreach ($contentTypes as $type) {
+                if ($wasContentMenu) {
+                    if (!$isNowChildMenu && $wasChildMenu === false) {
+                        DocsContent::where('menu_id', $navMenu->menu_id)->where('title', 'Default')->delete();
+                    }
+
+                    foreach ($contentTypesToManage as $type) {
                         $docsContent = DocsContent::firstOrNew(
                             ['menu_id' => $navMenu->menu_id, 'title' => $type]
                         );
 
-                        // Update judul dalam konten hanya jika konten masih default template
-                        $oldContentHeader = '# ' . $oldMenuNama . ' - ' . $type;
                         $newContentHeader = '# ' . $request->menu_nama . ' - ' . $type;
+                        $oldContentHeaderPrefix = '# ' . $oldMenuNama . ' - ' . $type;
 
                         if ($docsContent->exists) {
-                            if ($menuNamaChanged && Str::startsWith($docsContent->content, $oldContentHeader) && Str::endsWith($docsContent->content, "\n\nBelum ada konten untuk halaman ini. Silakan edit untuk menambahkan.")) {
-                                $docsContent->content = str_replace($oldContentHeader, $newContentHeader, $docsContent->content);
+                            if ($menuNamaChanged && Str::startsWith($docsContent->content, $oldContentHeaderPrefix)) {
+                                $docsContent->content = substr_replace($docsContent->content, $newContentHeader, 0, strlen($oldContentHeaderPrefix));
                             }
                         } else {
-                            $docsContent->content = $newContentHeader . "\n\nBelum ada konten untuk halaman ini. Silakan edit untuk menambahkan.";
+                            $docsContent->content = $newContentHeader . $defaultContentPlaceholder;
                         }
                         $docsContent->save();
                     }
-                    if (!$oldMenuChild && $wasContentMenu) {
-                        DocsContent::where('menu_id', $navMenu->menu_id)->where('title', 'Default')->delete();
-                    }
-                } else { // Is now a top-level menu with content
-                    $docsContent = DocsContent::firstOrNew(
-                        ['menu_id' => $navMenu->menu_id, 'title' => 'Default']
-                    );
 
-                    // Update judul dalam konten hanya jika konten masih default template
-                    $oldContentHeader = '# ' . $oldMenuNama;
-                    $newContentHeader = '# ' . $request->menu_nama;
-
-                    if ($docsContent->exists) {
-                        if ($menuNamaChanged && Str::startsWith($docsContent->content, $oldContentHeader) && Str::endsWith($docsContent->content, "\n\nBelum ada konten untuk halaman ini. Silakan edit untuk menambahkan.")) {
-                            $docsContent->content = str_replace($oldContentHeader, $newContentHeader, $docsContent->content);
-                        }
-                    } else {
-                        $docsContent->content = $newContentHeader . "\n\nBelum ada konten untuk halaman ini. Silakan edit untuk menambahkan.";
+                } else {
+                    foreach ($contentTypesToManage as $type) {
+                        $docsContent = DocsContent::firstOrNew(
+                            ['menu_id' => $navMenu->menu_id, 'title' => $type]
+                        );
+                        $docsContent->content = '# ' . $request->menu_nama . ' - ' . $type . $defaultContentPlaceholder;
+                        $docsContent->save();
                     }
-                    $docsContent->save();
-
-                    if ($oldMenuChild !== 0 && $wasContentMenu) {
-                        DocsContent::where('menu_id', $navMenu->menu_id)
-                            ->whereIn('title', ['UAT', 'Pengkodean', 'Database'])
-                            ->delete();
-                    }
+                    DocsContent::where('menu_id', $navMenu->menu_id)->where('title', 'Default')->delete();
                 }
-            } else { // No longer a content menu, delete all associated content
+            } else {
                 $navMenu->docsContent()->delete();
             }
         });
 
-        // Tentukan kategori saat ini untuk response
-        // Asumsi kategori di sini sama dengan kategori menu yang diupdate
-        $currentCategory = $navMenu->category; 
-        
+        $currentCategory = $navMenu->category;
+
         return response()->json([
             'success' => 'Menu berhasil diperbarui!',
             'menu_id' => $navMenu->menu_id,
             'new_menu_nama' => $navMenu->menu_nama,
             'new_menu_link' => $navMenu->menu_link,
-            'old_menu_link' => $oldMenuLink, // Kirim link lama juga untuk perbandingan di frontend
-            'current_category' => $currentCategory, // Kirim kategori
+            'old_menu_link' => $oldMenuLink,
+            'current_category' => $currentCategory,
             'menu_status' => $navMenu->menu_status,
         ]);
     }
