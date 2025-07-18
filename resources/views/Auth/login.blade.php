@@ -20,7 +20,7 @@
         <!-- Header -->
         <div class="text-center mb-8">
             <div class="logo">
-                <img src="{{ asset('img/logo-idw-fix.png')}}" alt="">
+                <img src="{{ asset('img/indoweb.png')}}" alt="">
             </div>
             <h1 class="text-3xl font-bold text-gray-800">E - Docs</h1>
             <p class="text-gray-500 mt-2">Silahkan masukkan email dan password anda</p>

@@ -169,12 +169,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const categoryNameInput = document.getElementById('form_category_nama');
             const categoryName = categoryNameInput.value;
             const method = document.getElementById('form_category_method').value;
+            const categorySlugToEdit = document.getElementById('form_category_slug_to_edit').value;
             
             let url = '/kategori'; // For POST (create)
             let httpMethod = 'POST';
 
             if (method === 'PUT') {
-                url = `/kategori/${currentCategory}`;
+                url = `/kategori/${categorySlugToEdit}`;
                 httpMethod = 'PUT';
             }
 
@@ -221,12 +222,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
             const loadingNotif = showNotification('Menyimpan menu...', 'loading');
             console.log('Loading notification triggered:', loadingNotif);
-
+    
             const formData = new FormData(menuForm);
-            const method = document.getElementById('form_method').value; 
-            const newMenuNama = formData.get('form_menu_nama'); 
-
-            const dataToSend = {}; 
+            const method = document.getElementById('form_method').value;
+    
+            const dataToSend = {};
             formData.forEach((value, key) => {
                 if (key === 'form_menu_status') {
                     dataToSend['menu_status'] = value === 'on' ? 1 : 0;
@@ -236,15 +236,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     dataToSend[key] = value;
                 }
             });
+    
+            // Pastikan kategori terisi
             if (!dataToSend.category) {
                 dataToSend.category = currentCategory;
             }
-            
-            const menuIdFromData = dataToSend.menu_id; 
-            const url = menuIdFromData ? `/api/navigasi/${menuIdFromData}` : '/api/navigasi'; 
-            
-            // ... (console.log debugging form submit Anda yang sebelumnya) ...
-
+    
+            const menuIdFromData = dataToSend.menu_id;
+            const url = menuIdFromData ? `/api/navigasi/${menuIdFromData}` : '/api/navigasi';
+    
             const options = {
                 method: 'POST',
                 headers: {
@@ -259,98 +259,43 @@ document.addEventListener('DOMContentLoaded', () => {
             }
     
             try {
-                const data = await fetchAPI(url, options); 
-                console.log('Respons Sukses dari Server (data objek penuh):', data); 
+                const data = await fetchAPI(url, options);
+                console.log('Respons Sukses dari Server (data objek penuh):', data);
     
                 console.log('Memanggil hideNotification untuk:', loadingNotif);
-                hideNotification(loadingNotif); 
-
+                hideNotification(loadingNotif);
+    
                 console.log('Memanggil showCentralSuccessPopup dengan pesan:', data.success);
                 showCentralSuccessPopup(data.success);
-                
-                closeMenuModalAdmin(); 
-
-                // --- LOGIKA UPDATE FRONTEND TANPA REFRESH ---
-                // Dapatkan content_type saat ini dari URL jika ada
+    
+                closeMenuModalAdmin();
+    
+                // --- Logika AUTO-REFRESH Halaman ---
                 const urlParams = new URLSearchParams(window.location.search);
-                const currentContentType = urlParams.get('content_type') || 'Default'; 
-
-                // --- DEBUGGING isCurrentMenuOpened ---
-                console.log('Nilai data.menu_id (dari respons sukses):', data.menu_id);
-                console.log('Nilai window.initialBladeData:', window.initialBladeData);
-                console.log('Nilai window.initialBladeData.selectedNavItemId:', window.initialBladeData ? window.initialBladeData.selectedNavItemId : 'undefined');
-
-                const isCurrentMenuOpened = true; 
-                console.log('Hasil isCurrentMenuOpened:', isCurrentMenuOpened);
-                // --- AKHIR DEBUGGING isCurrentMenuOpened ---
-
-                // 1. Update Judul di Halaman Konten (jika menu ini sedang dibuka DAN menu_status=1)
-                if (mainContentTitleElement && data.menu_status == 1 && isCurrentMenuOpened) {
-                    let newTitleText = data.new_menu_nama;
-                    if (currentContentType !== 'Default') { 
-                        newTitleText;
-                    }
-                    mainContentTitleElement.textContent = newTitleText;
-                    console.log('Judul konten diperbarui.');
-                } else {
-                    console.log('Judul konten TIDAK diperbarui karena kondisi tidak terpenuhi.');
-                    console.log('mainContentTitleElement:', mainContentTitleElement);
-                    console.log('data.menu_status:', data.menu_status);
-                    console.log('isCurrentMenuOpened:', isCurrentMenuOpened);
+                // Ambil content_type dari URL yang aktif saat ini. Ini penting untuk mempertahankan tab konten.
+                const currentContentType = urlParams.get('content_type') || 'UAT'; // Default ke 'UAT' atau tipe pertama
+    
+                const newMenuLink = data.new_menu_link;
+                const newCategory = data.current_category; // Menggunakan data.current_category dari respons server
+    
+                let redirectUrl = `/docs/${newCategory}/${newMenuLink}`;
+    
+                // Tambahkan content_type hanya jika menu berstatus konten (menu_status == 1)
+                // dan content_type bukan 'Default' (karena sekarang parent/child pakai UAT/Pengkodean/Database)
+                if (data.menu_status === 1) {
+                    // Asumsi: Kita selalu ingin menampilkan tipe konten yang sama setelah refresh
+                    // Jika Anda punya tab UAT/Pengkodean/Database, currentContentType harus datang dari tab yang aktif.
+                    // Atau, jika menu tersebut baru menjadi content menu, mungkin default ke UAT.
+                    redirectUrl += `?content_type=${currentContentType}`;
                 }
-
-                // 2. Update URL di Address Bar (jika menu ini sedang dibuka DAN menu_status=1)
-                if (data.menu_status == 1 && isCurrentMenuOpened) {
-                    const newUrl = `/docs/${data.current_category}/${data.new_menu_link}?content_type=${currentContentType}`;
-                    if (window.location.href !== newUrl) { 
-                        history.pushState(null, '', newUrl);
-                        console.log('URL address bar diperbarui ke:', newUrl);
-                    } else {
-                        console.log('URL address bar tidak perlu diperbarui (sudah sama atau kondisi tidak terpenuhi).');
-                    }
-                } else {
-                    console.log('URL address bar TIDAK diperbarui karena kondisi tidak terpenuhi.');
-                    console.log('data.menu_status:', data.menu_status);
-                    console.log('isCurrentMenuOpened:', isCurrentMenuOpened);
-                }
-
-                // 3. Update Link di Sidebar Navigasi secara parsial
-                const $updatedLink = document.querySelector(`a[data-menu-id="${data.menu_id}"]`);
-                const $updatedDiv = document.querySelector(`div[data-toggle="submenu-${data.menu_id}"]`);
-                
-                if ($updatedLink || $updatedDiv) {
-                    const targetElement = $updatedLink ? $updatedLink.querySelector('span') : ($updatedDiv ? $updatedDiv.querySelector('span') : null);
-                    if (targetElement) {
-                        targetElement.textContent = data.new_menu_nama;
-                        console.log('Teks menu di sidebar diperbarui.');
-                    }
-
-                    if ($updatedLink) {
-                        let newHrefForSidebar = `/docs/${data.current_category}/${data.new_menu_link}`;
-                        if (data.menu_status === 1) {
-                            newHrefForSidebar += `?content_type=${currentContentType}`; 
-                        }
-                        $updatedLink.setAttribute('href', newHrefForSidebar);
-                        $updatedLink.setAttribute('data-menu-link', data.new_menu_link);
-                        console.log('Href link sidebar diperbarui ke:', newHrefForSidebar);
-                    }
-                    
-                    const oldMenuStatusFromForm = dataToSend.menu_status; 
-                    const oldMenuChildFromForm = dataToSend.menu_child; 
-
-                    if (data.menu_status != oldMenuStatusFromForm || data.menu_child != oldMenuChildFromForm) {
-                         console.log("Perubahan status/child terdeteksi, merefresh sidebar penuh.");
-                         refreshSidebar();
-                    }
-                } else {
-                    console.warn("Link menu tidak ditemukan di sidebar atau perubahan struktur kompleks, melakukan refresh sidebar penuh.");
-                    refreshSidebar();
-                }
-
+    
+                console.log('Mengarahkan ulang ke URL:', redirectUrl);
+                window.location.href = redirectUrl; // Ini akan memicu refresh penuh halaman
+    
             } catch (error) {
                 console.error('Kesalahan saat menyimpan menu:', error);
                 if (loadingNotif) {
-                     hideNotification(loadingNotif); 
+                    hideNotification(loadingNotif);
                 }
                 if (error.message) {
                     showNotification(`Gagal menyimpan: ${error.message}`, 'error');
@@ -359,7 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
-    } 
+    }
 
     if (cancelDeleteBtn) {
         cancelDeleteBtn.addEventListener('click', closeDeleteConfirmModal);
@@ -398,7 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Global functions (ensure these are indeed global or accessible)
-    window.openCategoryModal = (mode = 'create', defaultName = '') => {
+    window.openCategoryModal = (mode = 'create', defaultName = '', categorySlug = '') => {
         if (!categoryForm || !categoryModalTitle) {
             showNotification('Form kategori tidak ditemukan!', 'error');
             return;
@@ -407,6 +352,7 @@ document.addEventListener('DOMContentLoaded', () => {
         categoryForm.reset();
         document.getElementById('form_category_method').value = mode === 'edit' ? 'PUT' : 'POST';
         document.getElementById('form_category_nama').value = defaultName;
+        document.getElementById('form_category_slug_to_edit').value = categorySlug;
 
         categoryModalTitle.textContent = mode === 'edit' ? 'Edit Kategori' : 'Tambah Kategori';
         categoryModal.classList.remove('hidden');
