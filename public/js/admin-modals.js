@@ -18,11 +18,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let menuToDelete = null;
     const modalTitleElement = document.getElementById('modal-title');
-    const currentCategory = window.initialBladeData && window.initialBladeData.currentCategory 
-                            ? window.initialBladeData.currentCategory 
-                            : 'epesantren'; // Fallback default
+    const currentCategory = window.initialBladeData && window.initialBladeData.currentCategory
+                                ? window.initialBladeData.currentCategory
+                                : 'epesantren'; // Fallback default
 
-    const mainContentTitleElement = document.getElementById('main-content-title'); 
+    const mainContentTitleElement = document.getElementById('main-content-title');
 
     const openMenuModal = async (mode, menuData = null, parentId = 0) => {
         if (!menuForm || !modalTitleElement) {
@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         menuForm.reset();
         // Pastikan ID input hidden untuk menu_id adalah 'form_menu_id'
-        document.getElementById('form_menu_id').value = ''; 
+        document.getElementById('form_menu_id').value = '';
         // Pastikan ID input hidden untuk method adalah 'form_method'
         document.getElementById('form_method').value = mode === 'edit' ? 'PUT' : 'POST';
 
@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         menuModal.classList.add('show');
     };
-    
+
     const openDeleteConfirmModal = (menuId, menuNama) => {
         menuToDelete = { id: menuId, name: menuNama };
         if (deleteConfirmMessage) {
@@ -158,7 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     };
-    
+
     // Category Form Submission
     if (categoryForm) {
         categoryForm.addEventListener('submit', async function (e) {
@@ -170,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const categoryName = categoryNameInput.value;
             const method = document.getElementById('form_category_method').value;
             const categorySlugToEdit = document.getElementById('form_category_slug_to_edit').value;
-            
+
             let url = '/kategori'; // For POST (create)
             let httpMethod = 'POST';
 
@@ -196,15 +196,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await fetchAPI(url, options);
 
                 hideNotification(loadingNotif);
-                
-                // closeMenuModalAdmin(); // Ini salah, seharusnya closeCategoryModal
-                window.closeCategoryModal(); // Panggil fungsi penutup modal kategori
+                window.closeCategoryModal();
 
                 if (data.success) {
                     showCentralSuccessPopup(data.success);
-                    // Redirect ke kategori baru jika sukses
-                    const newSlug = data.new_slug || categoryName.toLowerCase().replace(/\s+/g, '-');
-                    window.location.href = `/docs/${newSlug}`;
+                    // 👇👇👇 PERBAIKAN DI SINI: Redirect ke URL yang benar untuk kategori baru/update 👇👇👇
+                    if (data.redirect_url) {
+                        window.location.href = data.redirect_url;
+                    } else {
+                        // Fallback jika redirect_url tidak ada (ini harusnya tidak terjadi jika backend benar)
+                        // Redirect ke kategori default epesantren
+                        window.location.href = `/docs/epesantren`;
+                    }
+                    // 👆👆👆 AKHIR PERBAIKAN 👆👆👆
                 } else {
                     showNotification(data.message || 'Gagal memproses kategori.', 'error');
                 }
@@ -215,17 +219,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    
+
     if (menuForm) {
         menuForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-    
+
             const loadingNotif = showNotification('Menyimpan menu...', 'loading');
             console.log('Loading notification triggered:', loadingNotif);
-    
+
             const formData = new FormData(menuForm);
             const method = document.getElementById('form_method').value;
-    
+
             const dataToSend = {};
             formData.forEach((value, key) => {
                 if (key === 'form_menu_status') {
@@ -236,15 +240,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     dataToSend[key] = value;
                 }
             });
-    
+
             // Pastikan kategori terisi
             if (!dataToSend.category) {
                 dataToSend.category = currentCategory;
             }
-    
+
             const menuIdFromData = dataToSend.menu_id;
             const url = menuIdFromData ? `/api/navigasi/${menuIdFromData}` : '/api/navigasi';
-    
+
             const options = {
                 method: 'POST',
                 headers: {
@@ -253,45 +257,39 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 body: JSON.stringify(dataToSend),
             };
-    
+
             if (method === 'PUT') {
                 options.headers['X-HTTP-Method-Override'] = 'PUT';
             }
-    
+
             try {
                 const data = await fetchAPI(url, options);
                 console.log('Respons Sukses dari Server (data objek penuh):', data);
-    
+
                 console.log('Memanggil hideNotification untuk:', loadingNotif);
                 hideNotification(loadingNotif);
-    
+
                 console.log('Memanggil showCentralSuccessPopup dengan pesan:', data.success);
                 showCentralSuccessPopup(data.success);
-    
+
                 closeMenuModalAdmin();
-    
+
                 // --- Logika AUTO-REFRESH Halaman ---
                 const urlParams = new URLSearchParams(window.location.search);
-                // Ambil content_type dari URL yang aktif saat ini. Ini penting untuk mempertahankan tab konten.
-                const currentContentType = urlParams.get('content_type') || 'UAT'; // Default ke 'UAT' atau tipe pertama
-    
+                const currentContentType = urlParams.get('content_type') || 'UAT';
+
                 const newMenuLink = data.new_menu_link;
-                const newCategory = data.current_category; // Menggunakan data.current_category dari respons server
-    
+                const newCategory = data.current_category;
+
                 let redirectUrl = `/docs/${newCategory}/${newMenuLink}`;
-    
-                // Tambahkan content_type hanya jika menu berstatus konten (menu_status == 1)
-                // dan content_type bukan 'Default' (karena sekarang parent/child pakai UAT/Pengkodean/Database)
+
                 if (data.menu_status === 1) {
-                    // Asumsi: Kita selalu ingin menampilkan tipe konten yang sama setelah refresh
-                    // Jika Anda punya tab UAT/Pengkodean/Database, currentContentType harus datang dari tab yang aktif.
-                    // Atau, jika menu tersebut baru menjadi content menu, mungkin default ke UAT.
                     redirectUrl += `?content_type=${currentContentType}`;
                 }
-    
+
                 console.log('Mengarahkan ulang ke URL:', redirectUrl);
                 window.location.href = redirectUrl; // Ini akan memicu refresh penuh halaman
-    
+
             } catch (error) {
                 console.error('Kesalahan saat menyimpan menu:', error);
                 if (loadingNotif) {
@@ -314,17 +312,17 @@ document.addEventListener('DOMContentLoaded', () => {
         confirmDeleteBtn.addEventListener('click', async () => {
             if (menuToDelete) {
                 const deleteLoadingNotif = showNotification('Menghapus menu...', 'loading');
-                
+
                 try {
                     const data = await fetchAPI(`/api/navigasi/${menuToDelete.id}`, { method: 'DELETE' });
-                    
-                    hideNotification(deleteLoadingNotif);    
+
+                    hideNotification(deleteLoadingNotif);
                     showCentralSuccessPopup(data.success);
-                    
+
                     closeDeleteConfirmModal();
-                    // refreshSidebar(); // Ini akan direplace dengan redirect
-                    
+
                     // === PERUBAHAN DI SINI ===
+                    // Ini seharusnya dari respons backend.
                     if (data.redirect_url) {
                         window.location.href = data.redirect_url; // Mengalihkan ke URL yang diberikan backend
                     } else {
@@ -333,7 +331,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // =========================
 
                 } catch (error) {
-                    hideNotification(deleteLoadingNotif);    
+                    hideNotification(deleteLoadingNotif);
                     showNotification(`Gagal menghapus: ${error.message || 'Terjadi kesalahan'}`, 'error');
                     console.error('Kesalahan menghapus menu:', error);
                     closeDeleteConfirmModal();
@@ -341,7 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    
+
     // Global functions (ensure these are indeed global or accessible)
     window.openCategoryModal = (mode = 'create', defaultName = '', categorySlug = '') => {
         if (!categoryForm || !categoryModalTitle) {
@@ -365,7 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.confirmDeleteCategory = (categorySlug, categoryName) => {
-        console.log('confirmDeleteCategory function called for:', categoryName, 'with slug:', categorySlug);
+        console.log('confirmDeleteCategory function called for:', categoryName, 'dengan slug:', categorySlug);
         Swal.fire({
             title: 'Yakin ingin menghapus kategori?',
             text: `Anda akan menghapus kategori "${categoryName}" beserta semua menu dan konten di dalamnya. Tindakan ini tidak dapat dibatalkan.`,
@@ -389,7 +387,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     hideNotification(loadingNotif);
                     if (data.success) {
                         showCentralSuccessPopup(data.success);
-                        window.location.href = `/docs/epesantren`;
+                        // Redirect ke URL yang diberikan backend setelah penghapusan
+                        if (data.redirect_url) { // Backend harus mengirim redirect_url
+                            window.location.href = data.redirect_url;
+                        } else {
+                            // Fallback jika backend tidak mengirim redirect_url
+                            window.location.href = `/docs/epesantren`; // Redirect ke kategori default
+                        }
                     } else {
                         showNotification(data.message || 'Gagal menghapus kategori.', 'error');
                     }

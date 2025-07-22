@@ -4,28 +4,60 @@ body {
     font-family: 'Inter', sans-serif;
 }
 .prose h1 {
-    @apply text-3xl font-bold mb-4 text-gray-800;
+    /* Tailwind's text-3xl font-bold mb-4 text-gray-800 */
+    font-size: 1.875rem; /* 30px */
+    font-weight: 700;
+    margin-bottom: 1rem; /* 16px */
+    color: #2d3748; /* gray-800 */
 }
 .prose h2 {
-    @apply text-2xl font-bold mb-3 text-gray-700;
+    /* Tailwind's text-2xl font-bold mb-3 text-gray-700 */
+    font-size: 1.5rem; /* 24px */
+    font-weight: 700;
+    margin-bottom: 0.75rem; /* 12px */
+    color: #4a5568; /* gray-700 */
 }
 .prose p {
-    @apply text-gray-700 leading-relaxed mb-4;
+    /* Tailwind's text-gray-700 leading-relaxed mb-4 */
+    color: #4a5568; /* gray-700 */
+    line-height: 1.625; /* 1.625 * font-size */
+    margin-bottom: 1rem; /* 16px */
 }
 .prose a {
-    @apply text-blue-600 hover:underline;
+    /* Tailwind's text-blue-600 hover:underline */
+    color: #3b82f6; /* blue-600 */
+    text-decoration: none;
+}
+.prose a:hover {
+    text-decoration: underline;
 }
 .prose code:not(pre code) {
-    @apply bg-gray-200 text-red-600 rounded px-1 py-0.5 text-sm;
+    /* Tailwind's bg-gray-200 text-red-600 rounded px-1 py-0.5 text-sm */
+    background-color: #edf2f7; /* gray-200 */
+    color: #dc2626; /* red-600 */
+    border-radius: 0.25rem; /* rounded */
+    padding: 0.125rem 0.25rem; /* px-1 py-0.5 */
+    font-size: 0.875rem; /* 14px */
 }
 .prose pre {
-    @apply bg-gray-800 text-white rounded-lg p-4 overflow-x-auto;
+    /* Tailwind's bg-gray-800 text-white rounded-lg p-4 overflow-x-auto */
+    background-color: #2d3748; /* gray-800 */
+    color: #fff;
+    border-radius: 0.5rem; /* rounded-lg */
+    padding: 1rem; /* 16px */
+    overflow-x: auto;
 }
 .prose ul {
-    @apply list-disc list-inside mb-4;
+    /* Tailwind's list-disc list-inside mb-4 */
+    list-style-type: disc;
+    list-style-position: inside;
+    margin-bottom: 1rem; /* 16px */
 }
 .prose ol {
-    @apply list-decimal list-inside mb-4;
+    /* Tailwind's list-decimal list-inside mb-4 */
+    list-style-type: decimal;
+    list-style-position: inside;
+    margin-bottom: 1rem; /* 16px */
 }
 
 /* Notifikasi Pop-up */
@@ -88,7 +120,7 @@ body {
     }
 }
 
-/* Modal asli untuk Add/Edit Menu */
+/* Modal utama untuk Add/Edit (Menu, UseCase, dll.) */
 .modal {
     position: fixed;
     top: 0;
@@ -98,7 +130,7 @@ body {
     background-color: rgba(0, 0, 0, 0.5);
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: center; /* Untuk menempatkan modal di tengah secara vertikal */
     z-index: 4000;
     visibility: hidden;
     opacity: 0;
@@ -114,9 +146,14 @@ body {
     border-radius: 0.5rem;
     box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
     width: 90%;
-    max-width: 600px;
+    max-width: 850px; /* Lebar maksimum yang cukup untuk form UseCase */
     transform: translateY(-50px);
     transition: transform 0.3s ease-out;
+
+    /* --- PERBAIKAN UTAMA UNTUK SCROLL MODAL --- */
+    max-height: 90vh; /* Maksimal 90% dari tinggi viewport */
+    overflow-y: auto; /* Aktifkan scrolling vertikal jika konten melebihi max-height */
+    /* --- AKHIR PERBAIKAN UTAMA --- */
 }
 .modal.show .modal-content {
     transform: translateY(0);
@@ -127,7 +164,6 @@ body {
     max-width: 400px; /* Lebar maksimum seperti gambar */
     padding: 2rem; /* Sesuaikan padding */
     text-align: center;
-    /* Pastikan transisi untuk muncul/hilang halus */
     transform: translateY(-50px);
     transition: transform 0.3s ease-out;
 }
@@ -290,8 +326,6 @@ body {
     align-items: center;
     min-width: 0; /* Penting untuk flex item agar menghormati batas konten */
     padding-right: 0; /* Hapus padding kanan, gunakan gap pada parent */
-    /* Hapus max-width dari sini agar header-main-category-title bisa lebih fleksibel */
-    /* max-width: 300px; */ 
 }
 
 .header-spacer-right {
@@ -331,17 +365,14 @@ body {
 
 /* Untuk nama kategori di judul paling kiri header */
 .header-main-category-title {
-    /* Ini adalah link <a> di dalam .header-spacer-left */
-    display: inline-flex; /* Tetap inline-flex untuk sejajar dengan mobile menu toggle */
+    display: inline-flex;
     align-items: center;
-    min-width: 0; /* SANGAT PENTING untuk flex item dalam flex container */
+    min-width: 0; 
     flex-shrink: 1; 
     flex-basis: auto; 
-    /* NEW: Tambahkan max-width yang lebih spesifik di sini */
-    max-width: 200px; /* Sesuaikan nilai ini agar pas dengan lebar sidebar */
+    max-width: 200px;
     min-width: 200px;
 }
-
 
 /* header-spacer-left .relative (pembungkus tombol dropdown kategori) */
 .header-spacer-left .relative {
@@ -352,7 +383,6 @@ body {
     flex-shrink: 1; 
     flex-basis: auto; 
 }
-
 
 /* Pembungkus dropdown kategori di header */
 .header-dropdown-menu {
@@ -391,7 +421,6 @@ body {
     flex-grow: 1; 
 }
 
-
 .header-dropdown-menu a:hover {
     background-color: #f1f1f1;
 }
@@ -424,7 +453,6 @@ body {
 #category-dropdown-btn #category-button-text {
     flex-grow: 1; 
     min-width: 0; 
-    /* white-space, overflow, text-overflow ditangani oleh .truncate-text */
 }
 
 #category-dropdown-btn .fa-chevron-down,
@@ -573,4 +601,64 @@ body {
 .content-tabs button.active {
     color: #3b82f6; /* blue-500 */
     border-bottom: 2px solid #3b82f6;
+}
+
+
+/* Styles for CKEditor within modals */
+.ckeditor-small + .ck.ck-editor {
+    max-height: 180px; /* Tinggi maksimum untuk editor di modal */
+    min-height: 100px;
+    overflow-y: auto;
+    border-radius: 0.5rem;
+    border: 1px solid #d1d5db;
+    width: 100%; /* Pastikan mengisi 100% dari kolomnya */
+    box-sizing: border-box; /* Agar padding/border tidak menambah lebar */
+}
+.ckeditor-small + .ck.ck-editor .ck-editor__editable {
+    min-height: 80px; /* Sesuaikan tinggi minimum area edit */
+    max-height: 140px; /* Sesuaikan tinggi maksimum area edit */
+    padding: 1em; 
+    line-height: 1.6;
+}
+.ckeditor-small + .ck.ck-editor .ck-toolbar {
+    border-bottom: 1px solid #d1d5db;
+    border-top-left-radius: 0.5rem;
+    border-top-right-radius: 0.5rem;
+}
+.ckeditor-small + .ck.ck-editor.ck-focused .ck-toolbar {
+    border-color: #3b82f6;
+}
+
+/* Tambahan untuk konsistensi form input */
+.shadow.appearance-none.border.rounded.w-full.py-2.px-3.text-gray-700 {
+    outline: none;
+    transition: all 0.2s ease-in-out;
+}
+.shadow.appearance-none.border.rounded.w-full.py-2.px-3.text-gray-700:focus {
+    border-color: #3b82f6; /* Tailwind blue-500 */
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5); /* Ring fokus */
+}
+
+/* Untuk memastikan input ckeditor juga punya margin-bottom */
+.ck-editor__main {
+    margin-bottom: 1rem;
+}
+
+/* Tombol aksi di tabel (detail, edit, delete) */
+.btn-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px; /* Lebar dan tinggi yang seragam */
+    height: 24px;
+    border-radius: 50%; /* Bentuk lingkaran */
+    transition: background-color 0.2s ease-in-out, transform 0.2s ease-in-out;
+}
+
+.btn-action:hover {
+    background-color: rgba(0, 0, 0, 0.1); /* Sedikit latar belakang saat hover */
+    transform: scale(1.1);
+}
+.btn-action i {
+    font-size: 0.8rem; /* Ukuran ikon lebih kecil */
 }
