@@ -6,9 +6,10 @@ namespace App\Http\Controllers;
 use App\Models\NavMenu;
 use App\Models\UseCase;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Str;
-use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
 use Illuminate\Support\Facades\Auth;
 use App\Models\ReportData;
 use App\Models\UatData;
@@ -163,7 +164,7 @@ class DocumentationController extends Controller
     /**
      * Menampilkan halaman detail untuk satu entri UAT.
      */
-    public function showUatDetailPage($category, $page, $useCaseSlug, $uatId): View
+    public function showUatDetailPage($category, $page, $useCaseSlug, $uatId): View|RedirectResponse
     {
         if (!Auth::check()) { // Pastikan pengguna terautentikasi
             return redirect()->route('login');
@@ -211,7 +212,7 @@ class DocumentationController extends Controller
     /**
      * Menampilkan halaman detail untuk satu entri Report.
      */
-    public function showReportDetailPage($category, $page, $useCaseSlug, $reportId): View
+    public function showReportDetailPage($category, $page, $useCaseSlug, $reportId): View|RedirectResponse
     {
         if (!Auth::check()) { // Pastikan pengguna terautentikasi
             return redirect()->route('login');
@@ -255,7 +256,7 @@ class DocumentationController extends Controller
     /**
      * Menampilkan halaman detail untuk satu entri Database.
      */
-    public function showDatabaseDetailPage($category, $page, $useCaseSlug, $databaseId): View
+    public function showDatabaseDetailPage($category, $page, $useCaseSlug, $databaseId): View|RedirectResponse
     {
         if (!Auth::check()) { // Pastikan pengguna terautentikasi
             return redirect()->route('login');
@@ -337,54 +338,19 @@ class DocumentationController extends Controller
         $results = [];
         $searchTerm = '%' . strtolower($query) . '%';
 
-        // 1. Cari di NavMenu (nama menu)
         $menuMatches = NavMenu::whereRaw('LOWER(TRIM(menu_nama)) LIKE ?', [$searchTerm])
             ->get();
 
         foreach ($menuMatches as $menu) {
-            $key = 'menu-' . $menu->menu_id . '-' . $menu->category;
-            $results[$key] = [
+            $results[$menu->menu_id . '-' . $menu->category] = [
                 'id' => $menu->menu_id,
                 'name' => $menu->menu_nama,
                 'category_name' => Str::headline($menu->category),
                 'url' => route('docs', ['category' => $menu->category, 'page' => Str::slug($menu->menu_nama)]),
-                'context' => 'Menu Navigasi', // Lebih spesifik
+                'context' => 'Judul Menu',
             ];
         }
 
-        // 2. Cari di UseCase (nama proses, deskripsi aksi, aktor, dll.)
-        $useCaseMatches = UseCase::with('menu')
-            ->where(function($q) use ($searchTerm) {
-                $q->whereRaw('LOWER(nama_proses) LIKE ?', [$searchTerm])
-                  ->orWhereRaw('LOWER(deskripsi_aksi) LIKE ?', [$searchTerm])
-                  ->orWhereRaw('LOWER(aktor) LIKE ?', [$searchTerm])
-                  ->orWhereRaw('LOWER(tujuan) LIKE ?', [$searchTerm])
-                  ->orWhereRaw('LOWER(kondisi_awal) LIKE ?', [$searchTerm])
-                  ->orWhereRaw('LOWER(kondisi_akhir) LIKE ?', [$searchTerm])
-                  ->orWhereRaw('LOWER(aksi_reaksi) LIKE ?', [$searchTerm])
-                  ->orWhereRaw('LOWER(reaksi_sistem) LIKE ?', [$searchTerm]);
-            })
-            ->get();
-
-        foreach ($useCaseMatches as $useCase) {
-            if ($useCase->menu) {
-                // Link ke halaman detail use case
-                $useCaseDetailUrl = route('docs.use_case_detail', [
-                    'category' => $useCase->menu->category,
-                    'page' => Str::slug($useCase->menu->nama_proses), // menu_slug dari navmenu
-                    'useCaseSlug' => Str::slug($useCase->nama_proses) // slug dari nama proses usecase
-                ]);
-
-                $key = 'usecase-' . $useCase->id . '-' . $useCase->menu->category;
-                $results[$key] = [
-                    'id' => $useCase->id, // ID UseCase
-                    'name' => $useCase->nama_proses . ' (Tindakan di ' . $useCase->menu->menu_nama . ')', // Tampilkan dari mana
-                    'category_name' => Str::headline($useCase->menu->category),
-                    'url' => $useCaseDetailUrl,
-                    'context' => Str::limit(strip_tags($useCase->deskripsi_aksi ?: $useCase->nama_proses), 100),
-                ];
-            }
-        }
 
         return response()->json(['results' => array_values($results)]);
     }

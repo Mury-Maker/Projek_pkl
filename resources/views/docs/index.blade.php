@@ -20,22 +20,25 @@
     @endauth
 </head>
 <body class="bg-gray-100">
-    <div class="flex h-screen flex-col">
-        {{-- Header --}}
-        @include('docs.partials._header')
+    <div class="flex h-screen"> {{-- MENGUBAH 'flex-col' MENJADI 'flex' UNTUK TATA LETAK HORIZONTAL --}}
 
-        <div class="flex flex-1 overflow-hidden">
-            {{-- Sidebar --}}
-            @include('docs.partials._sidebar', [
-                'currentCategory' => $currentCategory ?? 'epesantren',
-                'selectedNavItemId' => $menu_id ?? null
-            ])
+        {{-- Sidebar Component --}}
+        {{-- DIPINDAHKAN: Sidebar sekarang menjadi anak langsung dari kontainer flex utama --}}
+        @include('docs.partials._sidebar', [
+            'currentCategory' => $currentCategory ?? 'epesantren',
+            'selectedNavItemId' => $menu_id ?? null
+        ])
 
-            {{-- Main Content Area --}}
-            <main class="flex-1 overflow-y-auto p-8 lg:p-12 relative" style="background-color: white">
+        {{-- Wrapper Konten Utama (Header + Konten Utama) --}}
+        {{-- BARU: Div ini membungkus header dan konten utama, dan akan melebar/menyusut secara horizontal --}}
+        <div id="content-area-wrapper" class="flex-1 flex flex-col">
+            {{-- Header Component --}}
+            @include('docs.partials._header')
+
+            {{-- Area Konten Utama --}}
+            <main id="main-content-area" class="flex-1 overflow-y-auto p-8 lg:p-12 relative" style="background-color: white">
                 <div class="judul-halaman">
                     <h1 id="main-content-title"> {!! ucfirst(Str::headline($currentPage)) !!}</h1>
-                    {{-- Tombol aksi spesifik akan ditambahkan di yield content --}}
                     @yield('action-buttons')
                 </div>
 
@@ -44,7 +47,6 @@
             </main>
         </div>
     </div>
-
     @include('docs.partials._detail_data_modal')
     {{-- MODAL GLOBAL UNTUK PENCARIAN --}}
     @include('docs.partials._search_modal')
@@ -81,6 +83,7 @@
     {{-- Load all modular JS files --}}
     <script src="{{ asset('js/global-utils.js') }}"></script>
     <script src="{{ asset('js/mobile-sidebar.js') }}"></script>
+    <script src="{{ asset('js/desktop-sidebar-toggle.js') }}"></script> {{-- BARU: File JavaScript untuk sidebar desktop --}}
     <script src="{{ asset('js/search-logic.js') }}"></script>
     <script src="{{ asset('js/category-dropdown.js') }}"></script>
     <script src="{{ asset('js/logout-form.js') }}"></script>

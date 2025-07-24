@@ -1,3 +1,5 @@
+// public/js/admin-modals.js
+
 document.addEventListener('DOMContentLoaded', () => {
     // Check if the user is an admin by looking for elements only present for admins
     const isAdmin = document.body.querySelector('#menu-modal') !== null;
@@ -15,6 +17,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const categoryForm = document.getElementById('categoryForm');
     const categoryModal = document.getElementById('categoryModal');
     const categoryModalTitle = document.getElementById('categoryModalTitle');
+
+    // CATATAN: Logika Desktop Sidebar Toggle telah dipindahkan ke 'desktop-sidebar-toggle.js'
+    // const desktopSidebarToggle = document.getElementById('desktop-sidebar-toggle');
+    // const sidebarElement = document.querySelector('aside');
+    // ... (kode terkait desktopSidebarToggle dihapus dari sini) ...
 
     let menuToDelete = null;
     const modalTitleElement = document.getElementById('modal-title');
@@ -108,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await fetchAPI(`/api/navigasi/all/${currentCategory}`);
             sidebarElement.innerHTML = data.html;
             attachAdminEventListeners();
-            window.initSidebarDropdown();
+            window.initSidebarDropdown(); // Panggil ulang initSidebarDropdown setelah refresh
         } catch (error) {
             showNotification('Gagal memuat ulang sidebar.', 'error');
             console.error('Error reloading sidebar:', error);
@@ -200,15 +207,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (data.success) {
                     showCentralSuccessPopup(data.success);
-                    // 👇👇👇 PERBAIKAN DI SINI: Redirect ke URL yang benar untuk kategori baru/update 👇👇👇
                     if (data.redirect_url) {
                         window.location.href = data.redirect_url;
                     } else {
-                        // Fallback jika redirect_url tidak ada (ini harusnya tidak terjadi jika backend benar)
-                        // Redirect ke kategori default epesantren
                         window.location.href = `/docs/epesantren`;
                     }
-                    // 👆👆👆 AKHIR PERBAIKAN 👆👆👆
                 } else {
                     showNotification(data.message || 'Gagal memproses kategori.', 'error');
                 }
@@ -321,14 +324,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     closeDeleteConfirmModal();
 
-                    // === PERUBAHAN DI SINI ===
-                    // Ini seharusnya dari respons backend.
                     if (data.redirect_url) {
                         window.location.href = data.redirect_url; // Mengalihkan ke URL yang diberikan backend
                     } else {
                         refreshSidebar(); // Fallback jika redirect_url tidak ada (jarang terjadi)
                     }
-                    // =========================
 
                 } catch (error) {
                     hideNotification(deleteLoadingNotif);
