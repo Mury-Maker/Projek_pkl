@@ -1,13 +1,12 @@
 <?php
 // File: app/Models/NavMenu.php
-// PERBAIKAN: Memastikan relasi docsContent ada dan buildTree yang benar
 
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
-use Illuminate\Support\Collection; // Tambahkan ini
+use Illuminate\Support\Collection;
 
 class NavMenu extends Model
 {
@@ -23,17 +22,18 @@ class NavMenu extends Model
         'menu_icon',
         'menu_child',
         'menu_order',
-        'menu_status',
+        'menu_status', // 0 = folder, 1 = memiliki daftar use case
         'category',
     ];
 
     /**
-     * Relasi ke konten dokumentasi (satu menu punya satu konten).
+     * Relasi ke UseCase (koleksi use case yang termasuk dalam menu ini).
      */
-    public function docsContent()
+    public function useCases() // Perubahan dari useCase() menjadi useCases() (plural)
     {
-        return $this->hasMany(DocsContent::class, 'menu_id', 'menu_id');
+        return $this->hasMany(UseCase::class, 'menu_id', 'menu_id')->orderBy('nama_proses'); // Urutkan berdasarkan nama proses
     }
+
     /**
      * Relasi ke parent menu.
      */
@@ -52,10 +52,6 @@ class NavMenu extends Model
 
     /**
      * Membangun menu hierarkis dari koleksi.
-     *
-     * @param \Illuminate\Support\Collection $elements Koleksi semua menu item.
-     * @param int $parentId ID parent saat ini (default 0 untuk root).
-     * @return array Array hierarkis dari objek menu.
      */
     public static function buildTree(Collection $elements, $parentId = 0): array
     {
@@ -63,31 +59,21 @@ class NavMenu extends Model
 
         foreach ($elements as $element) {
             if ($element->menu_child == $parentId) {
-                // Kloning objek untuk menghindari modifikasi koleksi asli selama rekursi
                 $item = clone $element;
 
-                // Atur menu_link
+                // menu_link untuk item navigasi akan selalu menunjuk ke halaman "index tindakan"
                 $pageSlug = Str::slug($item->menu_nama);
                 $item->menu_link = route('docs', ['category' => $item->category, 'page' => $pageSlug]);
                 
-                // Panggil rekursif untuk anak-anaknya
                 $children = self::buildTree($elements, $item->menu_id);
                 
-                // PENTING: Selalu set properti 'children' ke array kosong jika tidak ada anak
-                // atau ke array anak yang ditemukan. Ini memastikan $item->children selalu 
-                // berupa array PHP biasa, yang dievaluasi dengan benar oleh Blade.
-                $item->children = $children; 
+                $item->children = $children;
+                unset($item->relations['children']);
 
-                // Ini juga sangat penting: Unset relasi 'children' bawaan Eloquent
-                // agar Blade menggunakan properti 'children' yang kita buat manual
-                // daripada koleksi Eloquent kosong yang bisa dianggap !empty()
-                unset($item->relations['children']); 
-                
                 $branch[] = $item;
             }
         }
 
-        // Sort the branch by menu_order before returning
         usort($branch, function($a, $b) {
             return $a->menu_order <=> $b->menu_order;
         });
@@ -95,19 +81,16 @@ class NavMenu extends Model
         return $branch;
     }
 
-    
     public function isDescendantOf($potentialParentId): bool
     {
         $current = $this;
-        // Loop melalui parent hingga mencapai root (menu_child = 0) atau tidak ada parent
         while ($current->menu_child !== 0 && $current->menu_child !== null) {
             if ($current->menu_child == $potentialParentId) {
-                return true; // Ditemukan sebagai turunan
+                return true;
             }
-            // Pindah ke parent berikutnya menggunakan relasi 'parent'
             $current = $current->parent;
-            if (!$current) break; // Berhenti jika relasi parent tidak ditemukan
+            if (!$current) break;
         }
-        return false; // Bukan turunan
+        return false;
     }
 }

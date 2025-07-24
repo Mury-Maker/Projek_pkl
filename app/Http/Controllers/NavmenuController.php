@@ -1,11 +1,11 @@
 <?php
-// File: app/Http/Controllers/NavmenuController.php
+// File: app/Http/Controllers/NavmenuController.php (Revisi)
 
 namespace App\Http\Controllers;
 
 use App\Models\NavMenu;
+use App\Models\UseCase;
 use Illuminate\Http\Request;
-use App\Models\DocsContent;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
@@ -26,13 +26,11 @@ class NavmenuController extends Controller
 
     /**
      * Mengambil daftar parent menu yang *potensial* untuk dropdown.
-     * Mengembalikan semua menu aktif dalam kategori yang bisa menjadi parent,
-     * kecuali menu yang sedang diedit dan turunannya.
      */
     public function getParentMenus(Request $request, $category)
     {
         $query = NavMenu::where('category', $category)
-            ->where('menu_status', 0) // Hanya menu aktif yang bisa jadi parent (yaitu, tidak punya konten sendiri)
+            ->where('menu_status', 0) // Hanya menu "folder" yang bisa jadi parent
             ->orderBy('menu_nama');
 
         if ($request->has('editing_menu_id')) {
@@ -55,24 +53,23 @@ class NavmenuController extends Controller
     private function getDescendantIds($parentId): array
     {
         $descendantIds = [];
-        $queue = new Collection([$parentId]); // Mulai dengan parent yang diberikan
+        $queue = new Collection([$parentId]);
 
         while (!$queue->isEmpty()) {
-            $currentParentId = $queue->shift(); // Ambil elemen pertama dari antrian
+            $currentParentId = $queue->shift();
 
             $children = NavMenu::where('menu_child', $currentParentId)->pluck('menu_id')->toArray();
 
             foreach ($children as $childId) {
                 if (!in_array($childId, $descendantIds)) {
                     $descendantIds[] = $childId;
-                    $queue->push($childId); // Tambahkan anak ke antrian untuk diproses lebih lanjut
+                    $queue->push($childId);
                 }
             }
         }
 
         return array_unique($descendantIds);
     }
-
 
     /**
      * Mengambil semua menu untuk refresh sidebar (dalam bentuk HTML).
@@ -103,19 +100,14 @@ class NavmenuController extends Controller
             'menu_order' => 'nullable|integer',
             'category' => 'required|string',
             'menu_icon' => 'nullable|string|max:30',
-            'menu_status' => 'boolean',
+            'menu_status' => 'boolean', // 0 = folder, 1 = memiliki daftar use case
         ]);
 
-        // Cek apakah menu dengan nama dan kategori yang sama sudah ada
-        // Menggunakan validasi unique Laravel lebih disarankan untuk konsistensi
-        // 'unique:nav_menus,menu_nama,NULL,id,category,' . $request->category,
-        // Namun, jika Anda ingin tetap menggunakan cara manual ini, pastikan responsnya sama dengan validasi Laravel
         $menuExists = NavMenu::where('menu_nama', $request->menu_nama)
             ->where('category', $request->category)
             ->exists();
 
         if ($menuExists) {
-            // Mengembalikan respons error validasi yang konsisten dengan Laravel
             return response()->json([
                 'message' => 'The given data was invalid.',
                 'errors' => [
@@ -124,40 +116,26 @@ class NavmenuController extends Controller
             ], 422);
         }
 
-        // Variabel untuk menyimpan instance menu yang baru dibuat agar bisa diakses di luar transaction
         $newlyCreatedMenu = null;
 
-        DB::transaction(function () use ($request, &$newlyCreatedMenu) { // Gunakan '&' untuk pass-by-reference
+        DB::transaction(function () use ($request, &$newlyCreatedMenu) {
             $menu = NavMenu::create([
                 'menu_nama' => $request->menu_nama,
-                'menu_link' => Str::slug($request->menu_nama),
+                'menu_link' => Str::slug($request->menu_nama), // Link akan menunjuk ke halaman daftar use case
                 'menu_icon' => $request->menu_icon,
                 'menu_child' => $request->menu_child,
                 'menu_order' => $request->menu_order ?? 0,
-                'menu_status' => $request->has('menu_status') ? 1 : 0,
+                'menu_status' => $request->has('menu_status') ? 1 : 0, // 1 jika ini akan punya daftar use case
                 'category' => $request->category,
             ]);
 
-            $newlyCreatedMenu = $menu; // Simpan instance menu yang baru dibuat
+            $newlyCreatedMenu = $menu;
 
-            // --- START: Logika pembuatan DocsContent yang disamakan dengan update ---
-            if ($menu->menu_status == 1) {
-                $contentTypesToManage = ['UAT', 'Pengkodean', 'Database'];
-                $defaultContentPlaceholder = "\n\nBelum ada konten untuk halaman ini. Silakan edit untuk menambahkan.";
-
-                foreach ($contentTypesToManage as $type) {
-                    DocsContent::create([ // Gunakan create karena ini menu baru, tidak perlu firstOrCreate
-                        'menu_id' => $menu->menu_id,
-                        'title' => $type,
-                        'content' => '# ' . $request->menu_nama . ' - ' . $type . $defaultContentPlaceholder,
-                    ]);
-                }
-            }
-            // --- END: Logika pembuatan DocsContent yang disamakan dengan update ---
+            // Jika menu_status adalah 1 (berarti ini akan punya daftar UseCase),
+            // kita tidak perlu membuat UseCase default langsung di sini.
+            // UseCase akan dibuat ketika admin menambahkannya dari halaman daftar use case.
         });
 
-        // --- PENTING: Pastikan semua data ini dikembalikan ---
-        // Mengembalikan data dari $newlyCreatedMenu yang sudah diinisialisasi di dalam transaction
         return response()->json([
             'success' => 'Menu berhasil ditambahkan!',
             'menu_id' => $newlyCreatedMenu->menu_id,
@@ -165,23 +143,19 @@ class NavmenuController extends Controller
             'new_menu_link' => $newlyCreatedMenu->menu_link,
             'current_category' => $newlyCreatedMenu->category,
             'menu_status' => $newlyCreatedMenu->menu_status,
-        ], 201); // Menggunakan status 201 Created untuk resource baru
-    }      
+        ], 201);
+    }    
 
     /**
      * Memperbarui menu yang ada.
      */
     public function update(Request $request, NavMenu $navMenu)
     {
-        // --- START: Perubahan Validasi untuk menu_nama unik (DENGAN SCOPE KATEGORI) ---
         $request->validate([
             'menu_nama' => [
                 'required',
                 'string',
                 'max:50',
-                // Menggunakan Rule::unique dengan kondisi where untuk category
-                // Ini akan memeriksa keunikan menu_nama HANYA dalam category yang sama,
-                // dan mengabaikan record yang sedang di-update.
                 Rule::unique('navmenu', 'menu_nama')
                     ->where(function ($query) use ($request) {
                         return $query->where('category', $request->category);
@@ -189,12 +163,11 @@ class NavmenuController extends Controller
                     ->ignore($navMenu->menu_id, 'menu_id'),
             ],
             'menu_child' => 'required|integer',
-            'menu_order' => 'required|integer', 
+            'menu_order' => 'required|integer',    
             'menu_icon' => 'nullable|string|max:30',
-            'menu_status' => 'boolean',
-            'category' => 'required|string', // Pastikan category juga divalidasi
+            'menu_status' => 'boolean', // 0 = folder, 1 = memiliki daftar use case
+            'category' => 'required|string',
         ]);
-        // --- END: Perubahan Validasi ---
 
         if ($request->menu_child == $navMenu->menu_id) {
             return response()->json(['message' => 'Menu tidak bisa menjadi parent-nya sendiri.'], 422);
@@ -208,68 +181,28 @@ class NavmenuController extends Controller
         $oldMenuNama = $navMenu->menu_nama;
         $oldMenuLink = $navMenu->menu_link;
         $oldMenuStatus = $navMenu->menu_status;
-        $oldMenuChild = $navMenu->menu_child;
 
-        $defaultContentPlaceholder = "\n\nBelum ada konten untuk halaman ini. Silakan edit untuk menambahkan.";
-
-        DB::transaction(function () use ($request, $navMenu, $oldMenuNama, $oldMenuLink, $oldMenuStatus, $oldMenuChild, $defaultContentPlaceholder) {
+        DB::transaction(function () use ($request, $navMenu, $oldMenuNama, $oldMenuStatus) {
             $newMenuLink = Str::slug($request->menu_nama);
+            $newMenuStatus = $request->has('menu_status') ? 1 : 0;
 
             $navMenu->update([
                 'menu_nama' => $request->menu_nama,
                 'menu_link' => $newMenuLink,
                 'menu_icon' => $request->menu_icon,
                 'menu_child' => $request->menu_child,
-                'menu_order' => $request->menu_order ?? 0, 
-                'menu_status' => $request->has('menu_status') ? 1 : 0,
-                'category' => $request->category, // Pastikan category juga diupdate jika perlu
+                'menu_order' => $request->menu_order ?? 0,    
+                'menu_status' => $newMenuStatus,
+                'category' => $request->category,
             ]);
 
-            $isNowContentMenu = $navMenu->menu_status == 1;
-            $wasContentMenu = $oldMenuStatus == 1;
-            $isNowChildMenu = $navMenu->menu_child !== 0;
-            $wasChildMenu = $oldMenuChild !== 0;
-            $menuNamaChanged = ($request->menu_nama !== $oldMenuNama);
-
-            $contentTypesToManage = ['UAT', 'Pengkodean', 'Database'];
-
-            if ($isNowContentMenu) {
-                if ($wasContentMenu) {
-                    if (!$isNowChildMenu && $wasChildMenu === false) {
-                        DocsContent::where('menu_id', $navMenu->menu_id)->where('title', 'Default')->delete();
-                    }
-
-                    foreach ($contentTypesToManage as $type) {
-                        $docsContent = DocsContent::firstOrNew(
-                            ['menu_id' => $navMenu->menu_id, 'title' => $type]
-                        );
-
-                        $newContentHeader = '# ' . $request->menu_nama . ' - ' . $type;
-                        $oldContentHeaderPrefix = '# ' . $oldMenuNama . ' - ' . $type;
-
-                        if ($docsContent->exists) {
-                            if ($menuNamaChanged && Str::startsWith($docsContent->content, $oldContentHeaderPrefix)) {
-                                $docsContent->content = substr_replace($docsContent->content, $newContentHeader, 0, strlen($oldContentHeaderPrefix));
-                            }
-                        } else {
-                            $docsContent->content = $newContentHeader . $defaultContentPlaceholder;
-                        }
-                        $docsContent->save();
-                    }
-
-                } else {
-                    foreach ($contentTypesToManage as $type) {
-                        $docsContent = DocsContent::firstOrNew(
-                            ['menu_id' => $navMenu->menu_id, 'title' => $type]
-                        );
-                        $docsContent->content = '# ' . $request->menu_nama . ' - ' . $type . $defaultContentPlaceholder;
-                        $docsContent->save();
-                    }
-                    DocsContent::where('menu_id', $navMenu->menu_id)->where('title', 'Default')->delete();
-                }
-            } else {
-                $navMenu->docsContent()->delete();
+            // Jika status menu berubah dari 1 (punya daftar UseCase) menjadi 0 (folder)
+            if ($oldMenuStatus == 1 && $newMenuStatus == 0) {
+                // Hapus SEMUA UseCase terkait dan data turunannya
+                $navMenu->useCases()->delete(); // Gunakan relasi hasMany useCases()
             }
+            // Jika status menu berubah dari 0 (folder) menjadi 1 (akan punya daftar UseCase)
+            // Tidak perlu ada aksi di sini, UseCase akan dibuat ketika admin menambahkannya
         });
 
         $currentCategory = $navMenu->category;
@@ -290,11 +223,13 @@ class NavmenuController extends Controller
      */
     public function destroy(NavMenu $navMenu)
     {
-        $currentCategory = $navMenu->category; // Simpan kategori menu yang akan dihapus
+        $currentCategory = $navMenu->category;
 
         try {
             DB::transaction(function () use ($navMenu) {
-                $navMenu->docsContent()->delete(); // Hapus konten menu ini
+                // Hapus SEMUA UseCase terkait dan data turunannya (akan di-cascade oleh foreign key)
+                $navMenu->useCases()->delete(); // Gunakan relasi hasMany useCases()
+                
                 // Hapus anak-anak secara rekursif. Asumsi 'children' adalah relasi Eloquent
                 $navMenu->children()->each(function ($child) {
                     $this->destroy($child); // Rekursif untuk anak-anak
@@ -302,29 +237,19 @@ class NavmenuController extends Controller
                 $navMenu->delete(); // Hapus menu itu sendiri
             });
 
-            // Setelah penghapusan, temukan menu pertama yang tersisa di kategori yang sama
+            // Redirect ke menu pertama yang tersedia di kategori yang sama
             $nextAvailableMenu = NavMenu::where('category', $currentCategory)
-                                        ->orderBy('menu_order')
-                                        ->orderBy('menu_id') // Tambahkan order by id untuk konsistensi
-                                        ->first();
+                                         ->orderBy('menu_order')
+                                         ->orderBy('menu_id')
+                                         ->first();
 
-            $redirectUrl = route('docs', ['category' => $currentCategory]); // Default ke kategori utama
+            $redirectUrl = route('docs', ['category' => 'epesantren']); // Default jika kategori kosong
 
             if ($nextAvailableMenu) {
-                // Jika menu yang tersisa memiliki status konten, arahkan ke halamannya
-                if ($nextAvailableMenu->menu_status == 1) {
-                    $redirectUrl = route('docs', [
-                        'category' => $currentCategory,
-                        'page' => $nextAvailableMenu->menu_link // Menggunakan menu_link yang sudah ada slug
-                    ]);
-                } else {
-                    // Jika menu yang tersisa tidak memiliki konten, arahkan ke kategori itu saja
-                    $redirectUrl = route('docs', ['category' => $currentCategory]);
-                }
-            } else {
-                // Jika tidak ada menu tersisa di kategori ini, arahkan ke kategori 'epesantren'
-                // atau kategori default lainnya
-                $redirectUrl = route('docs', ['category' => 'epesantren']);
+                $redirectUrl = route('docs', [
+                    'category' => $currentCategory,
+                    'page' => Str::slug($nextAvailableMenu->menu_nama)
+                ]);
             }
             
             return response()->json([
@@ -342,45 +267,8 @@ class NavmenuController extends Controller
     }
 
     /**
-     * Helper untuk menghapus children dan konten secara rekursif.
-     * This method is redundant since `destroy` handles recursion.
-     * It's good to keep helper methods within the class they're primarily used,
-     * but the main `destroy` method is already recursive.
-     * I'm keeping this commented out for reference, but it's not used.
+     * Mengelola kategori.
      */
-    /*
-    protected function deleteChildrenAndContent($parentId)
-    {
-        $children = NavMenu::where('menu_child', $parentId)->get();
-        foreach ($children as $child) {
-            $this->deleteChildrenAndContent($child->menu_id);
-            $child->docsContent()->delete();
-            $child->delete();
-        }
-    }
-    */
-
-    /**
-     * Update konten dari CKEditor.
-     */
-    public function updateMenuContent(Request $request, NavMenu $navMenu)
-    {
-        $request->validate([
-            'content' => 'required|string',
-            'content_type' => 'nullable|string' // Add content_type validation
-        ]);
-
-        $contentType = $request->input('content_type', 'Default'); // Get content_type or default to 'Default'
-
-        // Update or create content based on menu_id and title
-        DocsContent::updateOrCreate(
-            ['menu_id' => $navMenu->menu_id, 'title' => $contentType],
-            ['content' => $request->input('content')]
-        );
-
-        return response()->json(['success' => 'Konten berhasil diperbarui']);
-    }
-
     public function storeCategory(Request $request)
     {
         $request->validate([
@@ -391,27 +279,43 @@ class NavmenuController extends Controller
         $newCategorySlug = Str::slug($rawCategoryName);
         $displayCategoryName = Str::headline($rawCategoryName);
 
-        DB::transaction(function () use ($newCategorySlug, $displayCategoryName) {
+        $newlyCreatedMenu = null; // Inisialisasi variabel
+
+        DB::transaction(function () use ($newCategorySlug, $displayCategoryName, &$newlyCreatedMenu) {
             $menu = NavMenu::create([
                 'menu_nama' => 'Beranda ' . $displayCategoryName,
                 'menu_link' => $newCategorySlug . '/beranda-' . Str::slug($displayCategoryName),
                 'menu_icon' => 'fa-solid fa-home',
                 'menu_child' => 0,
                 'menu_order' => 0,
-                'menu_status' => 1,
+                'menu_status' => 1, // Beranda kategori akan memiliki daftar use case
                 'category' => $newCategorySlug,
             ]);
 
-            DocsContent::create([
+            $newlyCreatedMenu = $menu; // Simpan menu yang baru dibuat
+
+            // Buat UseCase default "Pengantar" untuk halaman beranda kategori baru
+            UseCase::create([
                 'menu_id' => $menu->menu_id,
-                'content' => '# Beranda ' . $displayCategoryName . "\n\nSelamat datang di dokumentasi untuk " . $displayCategoryName . ". Ini adalah halaman beranda Anda.",
-                'title' => 'Default'
+                'usecase_id' => 'INFO-BERANDA',
+                'nama_proses' => 'Informasi Umum',
+                'deskripsi_aksi' => '# Informasi Umum Kategori ' . $displayCategoryName . "\n\nIni adalah informasi pengantar untuk kategori ini. Anda dapat menambahkan tindakan-tindakan lain (use cases) di sini.",
+                'aktor' => 'Sistem',
+                'tujuan' => 'Memberikan gambaran umum kategori.',
+                'kondisi_awal' => 'Pengguna mengakses halaman beranda kategori.',
+                'kondisi_akhir' => 'Informasi umum ditampilkan.',
+                'aksi_reaksi' => 'Pengguna membaca konten.',
+                'reaksi_sistem' => 'Sistem menyajikan informasi.',
             ]);
         });
 
+        // 👇 PERBAIKAN DI SINI: Redirect ke halaman beranda kategori yang baru dibuat
         return response()->json([
             'success' => 'Kategori berhasil ditambahkan!',
-            'new_slug' => $newCategorySlug,
+            'redirect_url' => route('docs', [
+                'category' => $newCategorySlug,
+                'page' => Str::slug($newlyCreatedMenu->menu_nama) // Menggunakan slug dari nama menu yang baru dibuat
+            ])
         ]);
     }
 
@@ -428,8 +332,8 @@ class NavmenuController extends Controller
         $newCategorySlug = Str::slug($newCategoryName);
 
         $existingCategory = NavMenu::where('category', $newCategorySlug)
-                                    ->where('category', '!=', $categorySlug)
-                                    ->first();
+                                        ->where('category', '!=', $categorySlug)
+                                        ->first();
 
         if ($existingCategory) {
             return response()->json([
@@ -444,19 +348,30 @@ class NavmenuController extends Controller
             $oldDisplayCategoryName = Str::headline(str_replace('-', ' ', $categorySlug));
             $newDisplayCategoryName = Str::headline($newCategoryName);
 
+            // Coba temukan 'Informasi Umum' use case untuk kategori ini dan perbarui
             $homeMenu = NavMenu::where('category', $newCategorySlug)
                                ->where('menu_child', 0)
                                ->where('menu_order', 0)
+                               ->where('menu_status', 1) // Pastikan ini adalah menu yang punya daftar UseCase
                                ->first();
 
-            if ($homeMenu && Str::startsWith($homeMenu->menu_nama, 'Beranda ' . $oldDisplayCategoryName)) {
-                $homeMenu->update([
-                    'menu_nama' => 'Beranda ' . $newDisplayCategoryName,
-                    'menu_link' => $newCategorySlug . '/beranda-' . Str::slug($newDisplayCategoryName),
-                ]);
-                $homeMenu->docsContent()->update([
-                    'content' => '# Beranda ' . $newDisplayCategoryName
-                ]);
+            if ($homeMenu) {
+                // Perbarui nama menu
+                if (Str::startsWith($homeMenu->menu_nama, 'Beranda ' . $oldDisplayCategoryName)) {
+                    $homeMenu->update([
+                        'menu_nama' => 'Beranda ' . $newDisplayCategoryName,
+                        'menu_link' => $newCategorySlug . '/beranda-' . Str::slug($newDisplayCategoryName),
+                    ]);
+                }
+
+                // Perbarui UseCase 'Informasi Umum' jika ada
+                $infoUseCase = $homeMenu->useCases()->where('usecase_id', 'INFO-BERANDA')->first();
+                if ($infoUseCase) {
+                    $infoUseCase->update([
+                        'nama_proses' => 'Informasi Umum Kategori ' . $newDisplayCategoryName,
+                        'deskripsi_aksi' => '# Informasi Umum Kategori ' . $newDisplayCategoryName . "\n\nIni adalah informasi pengantar untuk kategori ini.",
+                    ]);
+                }
             }
         });
 
@@ -471,7 +386,6 @@ class NavmenuController extends Controller
      */
     public function destroyCategory($categorySlug)
     {
-        // Guard sisi server untuk kategori default
         if ($categorySlug === 'epesantren') {
             return response()->json(['message' => 'Kategori "ePesantren" tidak dapat dihapus.'], 403);
         }
@@ -481,20 +395,46 @@ class NavmenuController extends Controller
                 // Ambil semua menu ID dalam kategori ini
                 $menuIdsInThisCategory = NavMenu::where('category', $categorySlug)->pluck('menu_id')->toArray();
 
-                // Hapus semua konten dokumentasi yang terkait dengan menu-menu ini
+                // Hapus semua UseCase yang terkait dengan menu-menu ini
                 if (!empty($menuIdsInThisCategory)) {
-                    DocsContent::whereIn('menu_id', $menuIdsInThisCategory)->delete();
+                    // Ini akan memicu cascade delete untuk UAT, Report, Database Data
+                    UseCase::whereIn('menu_id', $menuIdsInThisCategory)->delete();
                 }
 
-                // Hapus semua menu di kategori ini (tidak perlu rekursif karena kita menghapus berdasarkan kategori)
+                // Hapus semua menu di kategori ini
                 NavMenu::where('category', $categorySlug)->delete();
             });
 
-            return response()->json(['success' => 'Kategori dan semua menu di dalamnya berhasil dihapus!']);
+            // 👇👇👇 PERBAIKAN DI SINI: Logika Redirect Setelah Hapus Kategori 👇👇👇
+            // Coba temukan menu pertama di kategori 'epesantren' yang valid
+            $defaultCategoryRedirect = route('docs.index'); // Default fallback ke rute docs.index (yang akan me-redirect ke menu pertama yang valid)
+
+            $firstMenuInEpesantren = NavMenu::where('category', 'epesantren')
+                                             ->orderBy('menu_order')
+                                             ->orderBy('menu_id')
+                                             ->first();
+
+            if ($firstMenuInEpesantren) {
+                // Jika ada menu di epesantren, arahkan ke sana
+                $defaultCategoryRedirect = route('docs', [
+                    'category' => 'epesantren',
+                    'page' => Str::slug($firstMenuInEpesantren->menu_nama)
+                ]);
+            } else {
+                // Jika tidak ada menu sama sekali di epesantren, arahkan ke root docs
+                // DocumentationController->index() akan menangani redirect ke kategori/halaman yang valid atau fallback
+                $defaultCategoryRedirect = route('docs.index');
+            }
+
+            return response()->json([
+                'success' => 'Kategori dan semua menu di dalamnya berhasil dihapus!',
+                'redirect_url' => $defaultCategoryRedirect // Kirim URL redirect yang sudah pasti valid
+            ]);
+            // 👆👆👆 AKHIR PERBAIKAN 👇👇👇
 
         } catch (QueryException $e) {
             Log::error('Database error deleting category ' . $categorySlug . ': ' . $e->getMessage());
-            return response()->json(['message' => 'Gagal menghapus kategori. Pastikan tidak ada data terkait yang mencegah penghapusan (cek foreign key constraints atau logic rekursif).'], 500);
+            return response()->json(['message' => 'Gagal menghapus kategori. Kesalahan database.'], 500);
         } catch (\Exception $e) {
             Log::error('General error deleting category ' . $categorySlug . ': ' . $e->getMessage());
             return response()->json(['message' => 'Terjadi kesalahan tidak terduga saat menghapus kategori.'], 500);

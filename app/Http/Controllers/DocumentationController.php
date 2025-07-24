@@ -1,16 +1,21 @@
 <?php
-// File: app/Http/Controllers/DocumentationController.php
+// File: app/Http/Controllers/DocumentationController.php (Full Code)
 
 namespace App\Http\Controllers;
 
 use App\Models\NavMenu;
-use App\Models\DocsContent;
+use App\Models\UseCase;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Str;
-use Illuminate\View\View;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
 use Illuminate\Support\Facades\Auth;
+use App\Models\ReportData;
+use App\Models\UatData;
+use App\Models\DatabaseData;
+
+
 
 class DocumentationController extends Controller
 {
@@ -25,201 +30,298 @@ class DocumentationController extends Controller
 
         $defaultCategory = 'epesantren';
 
-        $firstMenu = NavMenu::where('category', $defaultCategory)
-            ->where('menu_child', 0)
-            ->orderBy('menu_order', 'asc')
-            ->first();
+        // Selalu coba temukan menu pertama yang valid untuk defaultCategory
+        $firstContentMenu = NavMenu::where('category', $defaultCategory)
+                                   ->where('menu_status', 1) // Prioritaskan menu dengan konten
+                                   ->orderBy('menu_order', 'asc')
+                                   ->first();
 
-        $categories = NavMenu::select('category')
-            ->whereNotNull('category')
-            ->distinct()
-            ->pluck('category');
+        if ($firstContentMenu) {
+            return redirect()->route('docs', [
+                'category' => $defaultCategory,
+                'page' => Str::slug($firstContentMenu->menu_nama),
+            ]);
+        } else {
+            // Jika tidak ada menu dengan status 1 di defaultCategory,
+            // cari menu (folder atau lainnya) yang ada di defaultCategory
+            $firstAnyMenu = NavMenu::where('category', $defaultCategory)
+                                    ->orderBy('menu_order', 'asc')
+                                    ->first();
 
-        if ($firstMenu && trim($firstMenu->menu_nama) !== '') {
-            $pageSlug = Str::slug($firstMenu->menu_nama);
-            if ($pageSlug !== '') {
+            if ($firstAnyMenu) {
+                // Redirect ke menu pertama yang ditemukan di kategori default
                 return redirect()->route('docs', [
                     'category' => $defaultCategory,
-                    'page' => $pageSlug,
+                    'page' => Str::slug($firstAnyMenu->menu_nama),
                 ]);
             }
         }
 
-        return $this->renderNoContentFallback($defaultCategory, collect());
+        // Fallback terakhir jika tidak ada menu sama sekali di kategori default
+        // Ini akan menampilkan halaman "Tidak Ada Konten"
+        return $this->renderNoContentFallback($defaultCategory);
     }
 
     /**
-     * Menampilkan halaman dokumentasi yang spesifik berdasarkan kategori dan halaman.
+     * Menampilkan halaman dokumentasi yang spesifik.
+     * Dapat menampilkan daftar use case atau detail satu use case.
      */
-    public function show($category, $page = null): View|RedirectResponse
+    public function show($category, $page = null, $useCaseSlug = null): View|RedirectResponse
     {
         if (!Auth::check()) {
             return redirect()->route('login');
         }
-    
+
         $categories = NavMenu::select('category')
             ->whereNotNull('category')
             ->distinct()
             ->pluck('category');
-    
+
         $allMenus = NavMenu::where('category', $category)->orderBy('menu_order')->get();
         $navigation = NavMenu::buildTree($allMenus);
-    
-        // Jika belum ada page (slug)
-        if (is_null($page)) {
-            // Cari menu parent dengan menu_status = 1
-            $parentMenus = $allMenus->where('menu_child', 0)->where('menu_status', 1);
-    
-            foreach ($parentMenus as $menu) {
-                $hasContent = DocsContent::where('menu_id', $menu->menu_id)->exists();
-                if ($hasContent) {
-                    return redirect()->route('docs', [
-                        'category' => $category,
-                        'page' => Str::slug($menu->menu_nama)
-                    ]);
-                }
-            }
-    
-            // Jika tidak ada parent menu yang punya konten, cari child menu teratas yang punya konten dan status aktif
-            $childMenus = $allMenus->where('menu_child', '!=', 0)->where('menu_status', 1);
-    
-            foreach ($childMenus as $menu) {
-                $hasContent = DocsContent::where('menu_id', $menu->menu_id)->exists();
-                if ($hasContent) {
-                    return redirect()->route('docs', [
-                        'category' => $category,
-                        'page' => Str::slug($menu->menu_nama)
-                    ]);
-                }
-            }
-    
-            // Fallback kalau tidak ada konten sama sekali
-            return $this->renderNoContentFallback($category, $navigation);
-        }
-    
-        // ===================== Jika page sudah ditentukan =========================
+
+        // Temukan NavMenu yang sedang aktif berdasarkan $page slug
         $selectedNavItem = $allMenus->first(function ($menu) use ($page) {
             return Str::slug($menu->menu_nama) === $page;
         });
-    
+
+        // 👇 PERBAIKAN DI SINI: Jika selectedNavItem tidak ditemukan, redirect ke category default atau fallback
         if (!$selectedNavItem) {
-            abort(404, 'Halaman dokumentasi tidak ditemukan.');
-        }
-    
-        $menuId = $selectedNavItem->menu_id;
-        $contentDocs = null;
-        $contentTypes = [];
-        $activeContentType = request()->query('content_type', 'Default');
-    
-        $docsContents = DocsContent::where('menu_id', $menuId)->get();
-    
-        if ($docsContents->isNotEmpty()) {
-            if ($selectedNavItem->menu_child !== 0) {
-                $contentTypes = $docsContents->pluck('title')->toArray();
-                $contentDocs = $docsContents->firstWhere('title', $activeContentType);
-                if (!$contentDocs) {
-                    $contentDocs = $docsContents->first();
-                }
+            // Coba redirect ke halaman index kategori yang diminta
+            $firstMenuInCategory = NavMenu::where('category', $category)
+                                         ->orderBy('menu_order')
+                                         ->first();
+
+            if ($firstMenuInCategory) {
+                return redirect()->route('docs', [
+                    'category' => $category,
+                    'page' => Str::slug($firstMenuInCategory->menu_nama),
+                ]);
             } else {
-                $contentDocs = $docsContents->firstWhere('title', 'Default');
+                // Jika bahkan tidak ada menu di kategori ini, gunakan fallback umum
+                return $this->renderNoContentFallback($category);
             }
         }
-    
-        if (!$contentDocs) {
-            $contentDocs = (object)['content' => null, 'title' => $activeContentType];
-        }
-    
-        return view('docs.index', [
-            'title'             => ucfirst($selectedNavItem->menu_nama) . ' - Dokumentasi ' . Str::headline($category),
+        // 👆 AKHIR PERBAIKAN 👆
+
+
+        $menuId = $selectedNavItem->menu_id;
+        $viewData = [
+            'title'             => ucfirst(Str::headline($selectedNavItem->menu_nama)) . ' - Dokumentasi ' . Str::headline($category),
             'navigation'        => $navigation,
             'currentCategory'   => $category,
             'currentPage'       => $page,
             'selectedNavItem'   => $selectedNavItem,
             'menu_id'           => $menuId,
             'allParentMenus'    => NavMenu::where('category', $category)->orderBy('menu_nama')->get(['menu_id', 'menu_nama']),
-            'contentDocs'       => $contentDocs,
-            'allDocsContents'   => $docsContents,
-            'contentTypes'      => $contentTypes,
-            'categories'        => $categories
-        ]);
-    }    
+            'categories'        => $categories,
+            'activeContentType' => request()->query('content_type', 'UAT'),
+        ];
 
-    private function renderNoContentFallback($category, $navigation): View
+        // SKENARIO 1: Menampilkan Daftar Use Case untuk suatu NavMenu (index tindakan)
+        if ($selectedNavItem->menu_status == 1 && is_null($useCaseSlug)) {
+            $useCases = UseCase::where('menu_id', $selectedNavItem->menu_id)->orderBy('id', 'desc')->get();
+            $viewData['useCases'] = $useCases;
+            return view('docs.use_case_index', $viewData);
+        }
+        // SKENARIO 2: Menampilkan Detail SATU Use Case
+        elseif ($selectedNavItem->menu_status == 1 && !is_null($useCaseSlug)) {
+            $singleUseCase = UseCase::with(['uatData', 'reportData', 'databaseData'])
+                                    ->where('menu_id', $selectedNavItem->menu_id)
+                                    ->where(function($query) use ($useCaseSlug) {
+                                        $query->whereRaw('LOWER(REPLACE(nama_proses, " ", "-")) = ?', [strtolower($useCaseSlug)])
+                                              ->orWhere('usecase_id', $useCaseSlug);
+                                    })
+                                    ->first();
+
+            if (!$singleUseCase) {
+                // Jika use case spesifik tidak ditemukan, redirect ke halaman daftar use case menu ini
+                return redirect()->route('docs.use_case_detail', [
+                    'category' => $category,
+                    'page' => Str::slug($selectedNavItem->menu_nama) // Kembali ke halaman daftar use case menu ini
+                ]);
+            }
+
+            // Memaksa load relasi dan konversi ke array untuk pengiriman data yang bersih
+            $viewData['singleUseCase'] = $singleUseCase->toArray();
+            $viewData['singleUseCase']['uat_data'] = $singleUseCase->uatData->toArray();
+            $viewData['singleUseCase']['report_data'] = $singleUseCase->reportData->toArray();
+            $viewData['singleUseCase']['database_data'] = $singleUseCase->databaseData->toArray();
+
+            $viewData['contentTypes'] = ['UAT', 'Report', 'Database'];
+            return view('docs.use_case_detail_page', $viewData);
+        }
+        // SKENARIO 3: Menu adalah Folder (menu_status == 0)
+        elseif ($selectedNavItem->menu_status == 0) {
+            return view('docs.folder_page', $viewData);
+        }
+
+        // Fallback jika tidak sesuai skenario di atas
+        // Ini seharusnya jarang terpanggil jika logika di atas sudah baik
+        return $this->renderNoContentFallback($category);
+    }
+
+    /**
+     * Menampilkan halaman detail untuk satu entri UAT.
+     */
+    public function showUatDetailPage($category, $page, $useCaseSlug, $uatId): View|RedirectResponse
     {
-        $fallbackPageName = 'no-content-available';
+        if (!Auth::check()) { // Pastikan pengguna terautentikasi
+            return redirect()->route('login');
+        }
+
+        // Temukan NavMenu yang sedang aktif
+        $selectedNavItem = NavMenu::where('category', $category)
+                                  ->where(function($query) use ($page) {
+                                      $query->whereRaw('LOWER(REPLACE(menu_nama, " ", "-")) = ?', [strtolower($page)]);
+                                  })
+                                  ->firstOrFail();
+
+        // Temukan UseCase utama
+        $useCase = UseCase::where('menu_id', $selectedNavItem->menu_id)
+                          ->where(function($query) use ($useCaseSlug) {
+                              $query->whereRaw('LOWER(REPLACE(nama_proses, " ", "-")) = ?', [strtolower($useCaseSlug)])
+                                    ->orWhere('usecase_id', $useCaseSlug);
+                          })
+                          ->firstOrFail();
+
+        // Temukan data UAT spesifik
+        $uatData = UatData::where('use_case_id', $useCase->id)
+                          ->where('id_uat', $uatId)
+                          ->firstOrFail();
+
+        // Siapkan data untuk view
+        $allMenus = NavMenu::where('category', $category)->orderBy('menu_order')->get();
+        $navigation = NavMenu::buildTree($allMenus);
+        $categories = NavMenu::select('category')->whereNotNull('category')->distinct()->pluck('category');
+
+        return view('docs.uat_detail_page', [ // Anda perlu membuat view ini
+            'title'             => 'Detail UAT: ' . ($uatData->nama_proses_usecase ?: 'N/A'),
+            'navigation'        => $navigation,
+            'currentCategory'   => $category,
+            'currentPage'       => $page,
+            'selectedNavItem'   => $selectedNavItem,
+            'menu_id'           => $selectedNavItem->menu_id,
+            'allParentMenus'    => NavMenu::where('category', $category)->orderBy('menu_nama')->get(['menu_id', 'menu_nama']),
+            'categories'        => $categories,
+            'uatData'           => $uatData, // Kirim objek UatData
+            'parentUseCase'     => $useCase, // Kirim UseCase induk jika perlu informasi tambahan
+        ]);
+    }
+
+    /**
+     * Menampilkan halaman detail untuk satu entri Report.
+     */
+    public function showReportDetailPage($category, $page, $useCaseSlug, $reportId): View|RedirectResponse
+    {
+        if (!Auth::check()) { // Pastikan pengguna terautentikasi
+            return redirect()->route('login');
+        }
+
+        $selectedNavItem = NavMenu::where('category', $category)
+                                  ->where(function($query) use ($page) {
+                                      $query->whereRaw('LOWER(REPLACE(menu_nama, " ", "-")) = ?', [strtolower($page)]);
+                                  })
+                                  ->firstOrFail();
+
+        $useCase = UseCase::where('menu_id', $selectedNavItem->menu_id)
+                          ->where(function($query) use ($useCaseSlug) {
+                              $query->whereRaw('LOWER(REPLACE(nama_proses, " ", "-")) = ?', [strtolower($useCaseSlug)])
+                                    ->orWhere('usecase_id', $useCaseSlug);
+                          })
+                          ->firstOrFail();
+
+        $reportData = ReportData::where('use_case_id', $useCase->id)
+                                ->where('id_report', $reportId)
+                                ->firstOrFail();
+
+        $allMenus = NavMenu::where('category', $category)->orderBy('menu_order')->get();
+        $navigation = NavMenu::buildTree($allMenus);
+        $categories = NavMenu::select('category')->whereNotNull('category')->distinct()->pluck('category');
+
+        return view('docs.report_detail_page', [ // Anda perlu membuat view ini
+            'title'             => 'Detail Report: ' . ($reportData->nama_report ?: 'N/A'),
+            'navigation'        => $navigation,
+            'currentCategory'   => $category,
+            'currentPage'       => $page,
+            'selectedNavItem'   => $selectedNavItem,
+            'menu_id'           => $selectedNavItem->menu_id,
+            'allParentMenus'    => NavMenu::where('category', $category)->orderBy('menu_nama')->get(['menu_id', 'menu_nama']),
+            'categories'        => $categories,
+            'reportData'        => $reportData, // Kirim objek ReportData
+            'parentUseCase'     => $useCase,
+        ]);
+    }
+
+    /**
+     * Menampilkan halaman detail untuk satu entri Database.
+     */
+    public function showDatabaseDetailPage($category, $page, $useCaseSlug, $databaseId): View|RedirectResponse
+    {
+        if (!Auth::check()) { // Pastikan pengguna terautentikasi
+            return redirect()->route('login');
+        }
+
+        $selectedNavItem = NavMenu::where('category', $category)
+                                  ->where(function($query) use ($page) {
+                                      $query->whereRaw('LOWER(REPLACE(menu_nama, " ", "-")) = ?', [strtolower($page)]);
+                                  })
+                                  ->firstOrFail();
+
+        $useCase = UseCase::where('menu_id', $selectedNavItem->menu_id)
+                          ->where(function($query) use ($useCaseSlug) {
+                              $query->whereRaw('LOWER(REPLACE(nama_proses, " ", "-")) = ?', [strtolower($useCaseSlug)])
+                                    ->orWhere('usecase_id', $useCaseSlug);
+                          })
+                          ->firstOrFail();
+
+        $databaseData = DatabaseData::where('use_case_id', $useCase->id)
+                                    ->where('id_database', $databaseId)
+                                    ->firstOrFail();
+
+        $allMenus = NavMenu::where('category', $category)->orderBy('menu_order')->get();
+        $navigation = NavMenu::buildTree($allMenus);
+        $categories = NavMenu::select('category')->whereNotNull('category')->distinct()->pluck('category');
+
+        return view('docs.database_detail_page', [ // Anda perlu membuat view ini
+            'title'             => 'Detail Database: ' . ($databaseData->keterangan ?: 'N/A'),
+            'navigation'        => $navigation,
+            'currentCategory'   => $category,
+            'currentPage'       => $page,
+            'selectedNavItem'   => $selectedNavItem,
+            'menu_id'           => $selectedNavItem->menu_id,
+            'allParentMenus'    => NavMenu::where('category', $category)->orderBy('menu_nama')->get(['menu_id', 'menu_nama']),
+            'categories'        => $categories,
+            'databaseData'      => $databaseData, // Kirim objek DatabaseData
+            'parentUseCase'     => $useCase,
+        ]);
+    }
+
+    private function renderNoContentFallback($category): View
+    {
+        $fallbackPageName = 'tidak-ada-konten';
 
         $categories = NavMenu::select('category')
             ->whereNotNull('category')
             ->distinct()
             ->pluck('category');
 
-        $content = '<h3>Tidak Ada Dokumentasi</h3><p>Belum ada konten dokumentasi yang dibuat untuk kategori ini. Silakan login sebagai **Admin** untuk menambahkan menu dan konten.</p>';
-        $contentDocs = (object)['content' => $content, 'title' => 'Default']; // Add 'title' key
+        $content = '<h3>Selamat Datang di Dokumentasi!</h3><p>Belum ada menu atau konten yang dibuat untuk kategori ini. Silakan login sebagai **Admin** untuk menambahkan kategori, menu, dan detail aksi.</p><p>Gunakan tombol **+ Tambah Menu Utama Baru** di sidebar atau tombol **+ Tambah Kategori** di dropdown kategori untuk memulai.</p>';
 
-        return view('docs.index', [
+        return view('docs.folder_page', [
             'title'             => 'Dokumentasi ' . Str::headline($category),
-            'navigation'        => $navigation,
+            'navigation'        => NavMenu::buildTree(NavMenu::where('category', $category)->orderBy('menu_order')->get()), // Pastikan navigasi dimuat
             'currentCategory'   => $category,
             'currentPage'       => $fallbackPageName,
             'selectedNavItem'   => null,
             'menu_id'           => 0,
-            'allParentMenus'    => collect(),
-            'contentDocs'       => $contentDocs,
-            'allDocsContents'   => collect(), // Empty collection
-            'contentTypes'      => [], // Empty array
+            'allParentMenus'    => NavMenu::where('category', $category)->orderBy('menu_nama')->get(['menu_id', 'menu_nama']),
             'categories'        => $categories,
+            'useCaseData'       => null,
+            'contentTypes'      => [],
+            'activeContentType' => 'UAT',
+            'fallbackMessage'   => $content,
         ]);
-    }
-
-    /**
-     * Menyimpan atau memperbarui konten dokumentasi.
-     */
-    public function saveContent(Request $request, $menu_id)
-    {
-        if (!Auth::check() || (Auth::user()->role ?? '') !== 'admin') {
-            abort(403, 'Anda tidak memiliki izin untuk melakukan tindakan ini.');
-        }
-
-        $validator = Validator::make($request->all(), [
-            'content' => 'required|string',
-            'content_type' => 'nullable|string', // Validate content_type
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['message' => 'Validation Error', 'errors' => $validator->errors()], 422);
-        }
-
-        $contentType = $request->input('content_type', 'Default');
-
-        DocsContent::updateOrCreate(
-            ['menu_id' => $menu_id, 'title' => $contentType], // Use menu_id and title for unique identification
-            ['content' => $request->input('content')]
-        );
-
-        return response()->json(['success' => 'Konten berhasil disimpan!']);
-    }
-
-    /**
-     * Menghapus konten dokumentasi.
-     */
-    public function deleteContent(Request $request, $menu_id)
-    {
-        if (!Auth::check() || (Auth::user()->role ?? '') !== 'admin') {
-            abort(403, 'Anda tidak memiliki izin untuk melakukan tindakan ini.');
-        }
-
-        $contentType = $request->input('content_type', 'Default'); // Get content_type from request
-
-        $doc = DocsContent::where('menu_id', $menu_id)
-                          ->where('title', $contentType) // Specify the content type to delete
-                          ->first();
-
-        if ($doc) {
-            $doc->delete();
-            return response()->json(['success' => 'Konten berhasil dihapus.']);
-        }
-
-        return response()->json(['error' => 'Konten tidak ditemukan.'], 404);
     }
 
     /**
@@ -249,24 +351,6 @@ class DocumentationController extends Controller
             ];
         }
 
-        $contentMatches = DocsContent::with('menu')
-            ->where('content', 'LIKE', "%{$query}%")
-            ->get();
-
-        foreach ($contentMatches as $content) {
-            if ($content->menu) {
-                $key = $content->menu->menu_id . '-' . $content->menu->category . '-' . Str::slug($content->title);
-                if (!isset($results[$key])) {
-                    $results[$key] = [
-                        'id' => $content->menu->menu_id,
-                        'name' => $content->menu->menu_nama,
-                        'category_name' => Str::headline($content->menu->category),
-                        'url' => route('docs', ['category' => $content->menu->category, 'page' => Str::slug($content->menu->menu_nama), 'content_type' => $content->title]),
-                        'context' => Str::limit(strip_tags($content->content), 100),
-                    ];
-                }
-            }
-        }
 
         return response()->json(['results' => array_values($results)]);
     }

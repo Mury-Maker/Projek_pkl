@@ -1,8 +1,11 @@
+// public/js/global-utils.js
+
 // Variable for CSRF token, accessible globally
 const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
 // Variable global for CKEditor instance (if applicable)
-let currentEditorInstance; // Will be defined by editor-logic.js
+// currentEditorInstance hanya akan digunakan di use-case-logic.js
+let currentEditorInstance; 
 
 /**
  * Displays a toast notification.
@@ -29,7 +32,7 @@ function showNotification(message, type = 'success', duration = 3000) {
 
     if (type === 'success') {
         iconClass = 'fa-solid fa-check-circle text-green';
-        timeoutDuration = 3000000000; // Default 3 seconds
+        timeoutDuration = 3000; // Default 3 seconds
     } else if (type === 'error') {
         iconClass = 'fa-solid fa-times-circle text-red-700';
     } else if (type === 'loading') {
@@ -87,11 +90,16 @@ function hideNotification(notifInfo) {
  * @returns {Promise<any>} - A promise that resolves to the JSON response.
  */
 async function fetchAPI(url, options = {}) {
-    const defaultHeaders = {
-        'Content-Type': 'application/json',
+    let defaultHeaders = {
         'X-CSRF-TOKEN': csrfToken,
         'Accept': 'application/json',
     };
+
+    // If body is NOT FormData, assume JSON and set Content-Type header
+    if (!(options.body instanceof FormData)) {
+        defaultHeaders['Content-Type'] = 'application/json';
+    }
+
     options.headers = { ...defaultHeaders, ...options.headers };
 
     try {
@@ -106,6 +114,7 @@ async function fetchAPI(url, options = {}) {
         throw error;
     }
 }
+
 
 /**
  * Displays a central success popup.
@@ -122,7 +131,7 @@ function showCentralSuccessPopup(message) {
         centralSuccessPopup.classList.add('show');
         setTimeout(() => {
             centralSuccessPopup.classList.remove('show');
-        }, 1000);
+        }, 1000); // Popup bertahan 1 detik
     }
 }
 
@@ -135,81 +144,5 @@ function updateCategoryButtonText(categoryKey, targetTextElement) {
     let categoryDisplayName = categoryKey.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
     if (targetTextElement) {
         targetTextElement.textContent = categoryDisplayName;
-    }
-}
-
-// Function for opening the CKEditor (called via onclick)
-function openEditor() {
-    const kontenView = document.getElementById('kontenView');
-    const editorContainer = document.getElementById('editor-container');
-    const editorContentTypeInput = document.getElementById('editor-content-type');
-    const editBtn = document.getElementById('editBtn');
-
-    kontenView.classList.add('hidden');
-    editorContainer.classList.remove('hidden');
-    if (editBtn) {
-        editBtn.classList.add('hidden');
-    }
-
-    const activeTabButton = document.querySelector('.content-tabs button.active');
-    let contentType = 'Default';
-    if (activeTabButton) {
-        contentType = activeTabButton.dataset.contentType;
-    }
-    editorContentTypeInput.value = contentType;
-
-    // Use initialBladeData.allDocsContents from the global scope
-    const allDocsContents = initialBladeData.allDocsContents;
-    const currentContent = allDocsContents.find(doc => doc.title === contentType);
-    const contentToLoad = currentContent ? currentContent.content : '# Belum ada konten untuk ' + contentType;
-
-    if (typeof ClassicEditor === 'undefined') {
-        showNotification('Pustaka CKEditor tidak dimuat. Periksa konsol browser untuk kesalahan.', 'error', 5000);
-        console.error('ClassicEditor is undefined. Ensure the CKEditor UMD script is loaded correctly.');
-        return;
-    }
-
-    if (!currentEditorInstance) {
-        const editorConfigFromMainJS = window.CKEDITOR_CONFIG || {};
-
-        const finalEditorConfig = {
-            ...editorConfigFromMainJS,
-            ckfinder: {
-                uploadUrl: `/upload?_token=${csrfToken}`
-            },
-            simpleUpload: {
-                uploadUrl: `/upload?_token=${csrfToken}`
-            },
-            plugins: [...(editorConfigFromMainJS.plugins || []), typeof SimpleUploadAdapter !== 'undefined' ? SimpleUploadAdapter : null].filter(Boolean),
-            toolbar: editorConfigFromMainJS.toolbar
-        };
-
-        setTimeout(() => {
-            ClassicEditor
-                .create(document.querySelector('#editor'), finalEditorConfig)
-                .then(editor => {
-                    currentEditorInstance = editor;
-                    editor.setData(contentToLoad);
-                })
-                .catch(error => {
-                    console.error('Error initializing CKEditor:', error);
-                    showNotification('Gagal menginisialisasi editor. Detail: ' + error.message, 'error', 5000);
-                });
-        }, 50);
-    } else {
-        currentEditorInstance.setData(contentToLoad);
-    }
-}
-
-// Function to close the CKEditor (called via onclick)
-function closeEditor() {
-    const kontenView = document.getElementById('kontenView');
-    const editorContainer = document.getElementById('editor-container');
-    const editBtn = document.getElementById('editBtn');
-
-    editorContainer.classList.add('hidden');
-    kontenView.classList.remove('hidden');
-    if (editBtn) {
-        editBtn.classList.remove('hidden');
     }
 }
