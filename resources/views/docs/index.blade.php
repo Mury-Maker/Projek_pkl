@@ -35,13 +35,151 @@
             {{-- Header Component --}}
             @include('docs.partials._header')
 
-            {{-- Area Konten Utama --}}
-            <main id="main-content-area" class="flex-1 overflow-y-auto p-8 lg:p-12 relative" style="background-color: white">
+            {{-- Main Content Area --}}
+            <main class="flex-1 overflow-y-auto p-8 lg:p-12 relative" style="background-color: white">
+                <nav class="flex items-center text-sm text-gray-600 mb-6" aria-label="Breadcrumb">
+                    <ol class="inline-flex items-center space-x-1 md:space-x-2 rtl:space-x-reverse">
+                
+                        {{-- Home --}}
+                        <li class="inline-flex items-center">
+                            @if (empty($selectedNavItem) && empty($parentUseCase))
+                                <span class="inline-flex items-center text-gray-800 font-semibold" aria-current="page">
+                                    <svg class="w-4 h-4 mr-1.5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M10 2L2 10h3v6h10v-6h3L10 2z" />
+                                    </svg>
+                                    Home
+                                </span>
+                            @else
+                                <a href="{{ route('docs', ['category' => $currentCategory]) }}" class="inline-flex items-center text-gray-500 hover:text-blue-600 transition">
+                                    <svg class="w-4 h-4 mr-1.5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M10 2L2 10h3v6h10v-6h3L10 2z" />
+                                    </svg>
+                                    Home
+                                </a>
+                            @endif
+                        </li>
+                
+                        {{-- Parent Menu (e.g., "Menu Utama") --}}
+                        @if ($selectedNavItem && $selectedNavItem->parent)
+                        <li>
+                            <div class="flex items-center">
+                                <svg class="rtl:rotate-180 w-3 h-3 text-gray-400 mx-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M7.05 4.05a1 1 0 011.414 0L14 9.586l-5.536 5.535a1 1 0 01-1.414-1.414L11.172 10 7.05 5.879a1 1 0 010-1.414z" />
+                                </svg>
+                                <a href="{{ route('docs', ['category' => $currentCategory, 'page' => Str::slug($selectedNavItem->parent->menu_nama)]) }}"
+                                class="text-gray-500 hover:text-blue-600 transition">
+                                    {{ $selectedNavItem->parent->menu_nama }}
+                                </a>
+                            </div>
+                        </li>
+                        @endif
+                
+                        {{-- Menu Sekarang (e.g., "epesantren") --}}
+                        @if ($selectedNavItem && empty($singleUseCase) && empty($parentUseCase))
+                        <li aria-current="page">
+                            <div class="flex items-center">
+                                <svg class="rtl:rotate-180 w-3 h-3 text-gray-400 mx-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M7.05 4.05a1 1 0 011.414 0L14 9.586l-5.536 5.535a1 1 0 01-1.414-1.414L11.172 10 7.05 5.879a1 1 0 010-1.414z" />
+                                </svg>
+                                <span class="text-blue-600 font-semibold">
+                                    {{ $selectedNavItem->menu_nama }}
+                                </span>
+                            </div>
+                        </li>
+                        @elseif($selectedNavItem && (isset($singleUseCase) || isset($parentUseCase)))
+                        <li>
+                            <div class="flex items-center">
+                                <svg class="rtl:rotate-180 w-3 h-3 text-gray-400 mx-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M7.05 4.05a1 1 0 011.414 0L14 9.586l-5.536 5.535a1 1 0 01-1.414-1.414L11.172 10 7.05 5.879a1 1 0 010-1.414z" />
+                                </svg>
+                                <a href="{{ route('docs', ['category' => $currentCategory, 'page' => Str::slug($selectedNavItem->menu_nama)]) }}"
+                                class="text-gray-500 hover:text-blue-600 transition">
+                                    {{ $selectedNavItem->menu_nama }}
+                                </a>
+                            </div>
+                        </li>
+                        @endif
+                
+                        {{-- Nama Use Case (Detail Aksi) --}}
+                        @if (!empty($singleUseCase))
+                        <li>
+                            <div class="flex items-center">
+                                <svg class="rtl:rotate-180 w-3 h-3 text-gray-400 mx-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M7.05 4.05a1 1 0 011.414 0L14 9.586l-5.536 5.535a1 1 0 01-1.414-1.414L11.172 10 7.05 5.879a1 1 0 010-1.414z" />
+                                </svg>
+                                <a href="{{ route('docs.use_case_detail', [
+                                    'category' => $currentCategory,
+                                    'page' => Str::slug($selectedNavItem->menu_nama),
+                                    'useCaseSlug' => Str::slug($singleUseCase['nama_proses'])
+                                ]) }}" class="text-blue-600 font-semibold">
+                                    Detail - {{ $singleUseCase['nama_proses'] }}
+                                </a>
+                            </div>
+                        </li>
+                        @endif
+
+                        {{-- Nama Parent Use Case (untuk detail Database/Report/UAT) --}}
+                        @if (!empty($parentUseCase))
+                        <li>
+                            <div class="flex items-center">
+                                <svg class="rtl:rotate-180 w-3 h-3 text-gray-400 mx-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M7.05 4.05a1 1 0 011.414 0L14 9.586l-5.536 5.535a1 1 0 01-1.414-1.414L11.172 10 7.05 5.879a1 1 0 010-1.414z" />
+                                </svg>
+                                <a href="{{ route('docs.use_case_detail', [
+                                    'category' => $currentCategory,
+                                    'page' => Str::slug($selectedNavItem->menu_nama),
+                                    'useCaseSlug' => Str::slug($parentUseCase->nama_proses)
+                                ]) }}" class="text-gray-500 hover:text-blue-600 transition">
+                                    Detail - {{ $parentUseCase->nama_proses }}
+                                </a>
+                            </div>
+                        </li>
+                        @endif
+                
+                        {{-- Detail Spesifik (Database, Report, UAT) --}}
+                        @if (isset($databaseData))
+                        <li aria-current="page">
+                            <div class="flex items-center">
+                                <svg class="rtl:rotate-180 w-3 h-3 text-gray-400 mx-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M7.05 4.05a1 1 0 011.414 0L14 9.586l-5.536 5.535a1 1 0 01-1.414-1.414L11.172 10 7.05 5.879a1 1 0 010-1.414z" />
+                                </svg>
+                                <span class="text-blue-600 font-semibold">
+                                    Database
+                                </span>
+                            </div>
+                        </li>
+                        @elseif (isset($reportData))
+                        <li aria-current="page">
+                            <div class="flex items-center">
+                                <svg class="rtl:rotate-180 w-3 h-3 text-gray-400 mx-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M7.05 4.05a1 1 0 011.414 0L14 9.586l-5.536 5.535a1 1 0 01-1.414-1.414L11.172 10 7.05 5.879a1 1 0 010-1.414z" />
+                                </svg>
+                                <span class="text-blue-600 font-semibold">
+                                    Report
+                                </span>
+                            </div>
+                        </li>
+                        @elseif (isset($uatData))
+                        <li aria-current="page">
+                            <div class="flex items-center">
+                                <svg class="rtl:rotate-180 w-3 h-3 text-gray-400 mx-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M7.05 4.05a1 1 0 011.414 0L14 9.586l-5.536 5.535a1 1 0 01-1.414-1.414L11.172 10 7.05 5.879a1 1 0 010-1.414z" />
+                                </svg>
+                                <span class="text-blue-600 font-semibold">
+                                    UAT
+                                </span>
+                            </div>
+                        </li>
+                        @endif
+                
+                    </ol>
+                </nav>                         
                 <div class="judul-halaman">
+                    {{-- BERIKAN ID PADA H1 INI --}}
                     <h1 id="main-content-title"> {!! ucfirst(Str::headline($currentPage)) !!}</h1>
+                    {{-- Tombol aksi spesifik akan ditambahkan di yield content --}}
                     @yield('action-buttons')
                 </div>
-
                 {{-- Konten Dinamis Halaman --}}
                 @yield('content')
             </main>

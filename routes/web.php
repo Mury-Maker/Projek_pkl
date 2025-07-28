@@ -68,12 +68,12 @@ Route::middleware('auth')->group(function () {
 
         // Rute untuk Report Data
         Route::post('/report', [UseCaseController::class, 'storeReportData'])->name('usecase.report.store');
-        Route::post('/report/{reportData:id_report}', [UseCaseController::class, 'updateReportData'])->name('usecase.report.update');
+        Route::put('/report/{reportData:id_report}', [UseCaseController::class, 'updateReportData'])->name('usecase.report.update');
         Route::delete('/report/{reportData:id_report}', [UseCaseController::class, 'destroyReportData'])->name('usecase.report.destroy');
 
         // Rute untuk Database Data
         Route::post('/database', [UseCaseController::class, 'storeDatabaseData'])->name('usecase.database.store');
-        Route::post('/database/{databaseData:id_database}', [UseCaseController::class, 'updateDatabaseData'])->name('usecase.database.update');
+        Route::put('/database/{databaseData:id_database}', [UseCaseController::class, 'updateDatabaseData'])->name('usecase.database.update');
         Route::delete('/database/{databaseData:id_database}', [UseCaseController::class, 'destroyDatabaseData'])->name('usecase.database.destroy');
     });
     // --- Akhir Rute API UseCase ---

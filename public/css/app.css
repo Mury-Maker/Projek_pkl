@@ -285,6 +285,7 @@ body {
     cursor: pointer;
     transition: background-color 0.3s ease, transform 0.2s ease;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    margin-top: 13px;
 }
 .logout-btn:hover {
     background-color: #dc2626;
@@ -294,17 +295,22 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    transition: background-color 0.2s ease-in-out, transform 0.2s ease-in-out;
+    width: 32px; /* Lebar tombol */
+    height: 32px; /* Tinggi tombol */
+    border-radius: 0.375rem; /* Sudut membulat (sesuai gambar) */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06); /* Sedikit bayangan */
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; /* Transisi untuk efek hover */
+    flex-shrink: 0; /* Pastikan tidak menyusut di dalam flex container */
 }
+
 .btn-action:hover {
-    background-color: rgba(0, 0, 0, 0.1);
-    transform: scale(1.1);
+    transform: translateY(-1px) scale(1.05); /* Sedikit naik dan membesar saat hover */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.12); /* Bayangan lebih jelas saat hover */
 }
+
 .btn-action i {
-    font-size: 0.8rem;
+    font-size: 1rem; /* Ukuran ikon */
+    line-height: 1; /* Memastikan ikon di tengah secara vertikal */
 }
 
 /* --- Dropdown Header & Sidebar --- */

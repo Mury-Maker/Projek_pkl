@@ -4,7 +4,6 @@
 const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
 // Variable global for CKEditor instance (if applicable)
-// currentEditorInstance hanya akan digunakan di use-case-logic.js
 let currentEditorInstance; 
 
 /**
@@ -90,28 +89,61 @@ function hideNotification(notifInfo) {
  * @returns {Promise<any>} - A promise that resolves to the JSON response.
  */
 async function fetchAPI(url, options = {}) {
-    let defaultHeaders = {
-        'X-CSRF-TOKEN': csrfToken,
-        'Accept': 'application/json',
-    };
+    let headers = new Headers(options.headers || {}); // Gunakan objek Headers untuk penanganan yang lebih baik
 
-    // If body is NOT FormData, assume JSON and set Content-Type header
-    if (!(options.body instanceof FormData)) {
-        defaultHeaders['Content-Type'] = 'application/json';
+    // Logika penanganan Content-Type untuk FormData
+    if (options.body instanceof FormData) {
+        // Jika body adalah FormData, JANGAN SET Content-Type. Browser akan mengurusnya.
+        // Hapus Content-Type yang mungkin sudah ada dari headers yang diberikan.
+        headers.delete('Content-Type'); 
+    } else if (!headers.has('Content-Type')) {
+        // Jika body BUKAN FormData dan Content-Type belum diset, asumsikan JSON.
+        headers.set('Content-Type', 'application/json');
     }
 
-    options.headers = { ...defaultHeaders, ...options.headers };
+    // Selalu set Accept untuk API responses
+    if (!headers.has('Accept')) {
+        headers.set('Accept', 'application/json');
+    }
+    
+    // Pastikan X-CSRF-TOKEN selalu ada
+    if (csrfToken && !headers.has('X-CSRF-TOKEN')) {
+        headers.set('X-CSRF-TOKEN', csrfToken);
+    }
+
+    options.headers = headers; // Assign Headers object back to options
 
     try {
+        console.log('fetchAPI: Memulai request ke', url, options); // Log untuk debugging
         const response = await fetch(url, options);
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || `HTTP Error! status: ${response.status}`);
+        console.log('fetchAPI: Menerima response. Status:', response.status); // Log status
+
+        let data = null;
+        const contentType = response.headers.get("content-type");
+
+        // Coba parsing body hanya jika Content-Type adalah JSON
+        if (contentType && contentType.includes("application/json")) {
+            data = await response.json();
+            console.log('fetchAPI: JSON berhasil diparsing. Data:', data); // Log data yang diparsing
+        } else {
+            console.warn('fetchAPI: Respons bukan JSON. Content-Type:', contentType);
+            // Jika respons bukan JSON tapi status OK, bisa jadi itu success tanpa body (misal 204 No Content)
+            // atau body kosong.
+            if (response.ok) {
+                return { success: true, message: "Operasi berhasil." }; 
+            }
         }
-        return await response.json();
+
+        if (!response.ok) {
+            // Jika respons TIDAK OK, lempar error. Gunakan data dari server jika ada.
+            throw new Error(data?.message || data?.error || `HTTP Error! status: ${response.status} (${response.statusText || 'Unknown Status'})`);
+        }
+        
+        return data; // Kembalikan data yang sudah diparsing untuk respons sukses
+
     } catch (error) {
-        console.error('Fetch API Error:', error);
-        throw error;
+        console.error('fetchAPI: Menangkap kesalahan umum:', error); // Log error yang ditangkap
+        throw error; // Lempar kembali error agar bisa ditangkap oleh event listener submit
     }
 }
 
