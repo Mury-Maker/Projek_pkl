@@ -1,6 +1,9 @@
 // public/js/use-case-logic.js (Full Code dengan Perbaikan Akhir)
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Pastikan csrfToken tersedia secara global, contoh:
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
     // --- Elemen Umum untuk Use Case ---
     const useCaseModal = document.getElementById('useCaseModal');
     const useCaseModalTitle = document.getElementById('useCaseModalTitle');
@@ -28,10 +31,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const addUatDataBtn = document.getElementById('addUatDataBtn');
     const uatDataTableBody = document.getElementById('uatDataTableBody');
     const formNamaProsesUsecase = document.getElementById('form_nama_proses_usecase');
-    // CKEditor elements for UAT modal
-    const uatCkEditorElements = {
-        gambar_uat: 'form_gambar_uat',
-    };
+    // Elemen untuk Input File Gambar UAT dan Pratinjau
+    const formGambarUatInput = document.getElementById('form_gambar_uat');
+    const formGambarUatPreview = document.getElementById('form_gambar_uat_preview');
+    const formGambarUatCurrent = document.getElementById('form_gambar_uat_current');
 
     // Report Data Elements
     const reportDataModal = document.getElementById('reportDataModal');
@@ -54,10 +57,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const cancelDatabaseDataFormBtn = document.getElementById('cancelDatabaseDataFormBtn');
     const addDatabaseDataBtn = document.getElementById('addDatabaseDataBtn');
     const databaseDataTableBody = document.getElementById('databaseDataTableBody');
-    // CKEditor elements for Database modal
-    const databaseCkEditorElements = {
-        gambar_database: 'form_gambar_database',
-    };
+    // Elemen untuk Input File Gambar Database dan Pratinjau
+    const formGambarDatabaseInput = document.getElementById('form_gambar_database');
+    const formGambarDatabasePreview = document.getElementById('form_gambar_database_preview');
+    const formGambarDatabaseCurrent = document.getElementById('form_gambar_database_current');
 
     // --- Detail Data Modal Elements ---
     const detailDataModal = document.getElementById('detailDataModal');
@@ -65,14 +68,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const detailContentWrapper = detailDataModal ? detailDataModal.querySelector('.detail-content-wrapper') : null;
     const closeDetailDataModalBtn = document.getElementById('closeDetailDataModalBtn');
 
-
     // --- Global Data from Blade ---
     const currentMenuId = window.initialBladeData.menu_id;
     const useCasesList = window.initialBladeData.useCases || [];
     const singleUseCaseData = window.initialBladeData.singleUseCase || {};
-    const activeContentType = window.initialBladeData.activeContentType;
+    // const activeContentType = window.initialBladeData.activeContentType; // Tidak digunakan lagi karena tidak ada tabs
 
     // --- CKEditor Elements IDs for UseCase Modal (Detail Aksi) ---
+    // CKEditor tetap digunakan di modal UseCase utama
     const useCaseCkEditorElements = {
         deskripsi_aksi: 'form_deskripsi_aksi',
         tujuan: 'form_tujuan',
@@ -81,7 +84,6 @@ document.addEventListener('DOMContentLoaded', () => {
         aksi_reaksi: 'form_aksi_reaksi',
         reaksi_sistem: 'form_reaksi_sistem',
     };
-
 
     // --- General Functions for Use Case Modal (Add/Edit Action) ---
     const openUseCaseModal = (mode, useCase = null) => {
@@ -148,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     formData.set(key, window.getCkEditorDataForUseCaseModal(useCaseCkEditorElements[key]));
                 }
             }
-
+            
             const jsonData = {};
             formData.forEach((value, key) => {
                 jsonData[key] = value;
@@ -222,7 +224,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             hideNotification(loadingNotif);
                             showCentralSuccessPopup(data.success);
                             window.location.reload();
-                        } catch (error) {
+                        }
+                        catch (error) {
                             console.error('Error deleting use case:', error);
                             hideNotification(loadingNotif);
                             showNotification(`Gagal menghapus tindakan: ${error.message || 'Terjadi kesalahan'}`, 'error');
@@ -256,6 +259,11 @@ document.addEventListener('DOMContentLoaded', () => {
         uatDataForm.reset();
         uatDataFormUseCaseId.value = singleUseCaseData.id || '';
 
+        // Bersihkan pratinjau gambar dan input file
+        if (formGambarUatInput) formGambarUatInput.value = ''; // Clear file input
+        if (formGambarUatPreview) formGambarUatPreview.innerHTML = ''; // Clear preview area
+        if (formGambarUatCurrent) formGambarUatCurrent.value = ''; // Clear hidden input for current image path
+
         if (!uatDataFormUseCaseId.value) {
             showNotification('Tidak ada Use Case yang dipilih untuk menambahkan data UAT.', 'error');
             return;
@@ -268,12 +276,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (formNamaProsesUsecase) {
                 formNamaProsesUsecase.value = singleUseCaseData.nama_proses || '';
             }
-            if (window.setCkEditorDataForUatModal) {
-                Object.values(uatCkEditorElements).forEach(id => window.setCkEditorDataForUatModal(id, ''));
-            }
+            // Hapus CKEditor init di sini
+            // if (window.setCkEditorDataForUatModal) { Object.values(uatCkEditorElements).forEach(id => window.setCkEditorDataForUatModal(id, '')); }
         } else if (mode === 'edit' && uat) {
             uatDataModalTitle.textContent = 'Edit Data UAT';
-            uatDataFormMethod.value = 'POST'; // Tetap POST untuk konsistensi penanganan file
+            uatDataFormMethod.value = 'POST'; // Tetap POST karena akan pakai FormData (untuk PUT dengan file)
             uatDataFormId.value = uat.id_uat;
 
             if (formNamaProsesUsecase) {
@@ -282,16 +289,21 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('form_keterangan_uat').value = uat.keterangan_uat || '';
             document.getElementById('form_status_uat').value = uat.status_uat || '';
 
-            if (window.setCkEditorDataForUatModal) {
-                window.setCkEditorDataForUatModal('form_gambar_uat', uat.gambar_uat || '');
+            // Tampilkan gambar UAT yang ada (jika ada)
+            if (formGambarUatPreview && uat.gambar_uat) {
+                formGambarUatPreview.innerHTML = `<img src="${uat.gambar_uat}" alt="Gambar UAT" class="max-w-full h-auto rounded">`;
+                formGambarUatPreview.classList.remove('hidden'); // Pastikan pratinjau terlihat
+                formGambarUatCurrent.value = uat.gambar_uat; // Simpan path gambar lama di hidden input
+            } else if (formGambarUatPreview) {
+                formGambarUatPreview.innerHTML = 'Tidak ada gambar lama.';
+                formGambarUatPreview.classList.remove('hidden');
             }
+            // Hapus CKEditor init di sini
+            // if (window.setCkEditorDataForUatModal) { window.setCkEditorDataForUatModal('form_gambar_uat', uat.gambar_uat || ''); }
         }
         uatDataModal.classList.add('show');
-        setTimeout(() => {
-            if (window.initCkEditorForUatModal) {
-                Object.values(uatCkEditorElements).forEach(window.initCkEditorForUatModal);
-            }
-        }, 100);
+        // Hapus CKEditor setTimeout init di sini
+        // setTimeout(() => { if (window.initCkEditorForUatModal) { Object.values(uatCkEditorElements).forEach(window.initCkEditorForUatModal); } }, 100);
     };
 
     const closeUatDataModal = () => {
@@ -313,7 +325,6 @@ document.addEventListener('DOMContentLoaded', () => {
             // View Detail UAT
             if (e.target.closest('.view-uat-btn')) {
                 const uatId = parseInt(e.target.closest('.view-uat-btn').dataset.id);
-                // 👇 PERBAIKAN: Menggunakan properti 'uat_data' dari singleUseCaseData
                 const uat = (singleUseCaseData.uat_data || []).find(item => item.id_uat === uatId);
                 if (uat) {
                     openDetailDataModal('Detail Data UAT', `
@@ -335,23 +346,20 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <div class="detail-item">
                             <label>Gambar UAT:</label>
-                            <div class="ck-content">${uat.gambar_uat || 'Tidak ada gambar'}</div>
+                            ${uat.gambar_uat ? `<img src="${uat.gambar_uat}" alt="Gambar UAT" class="max-w-full h-auto rounded">` : '<p>Tidak ada gambar</p>'}
                         </div>
                     `);
                 } else {
-                    // Notifikasi error yang lebih spesifik
                     showNotification('Detail data UAT untuk entri ini tidak tersedia. Silakan cek data.', 'error');
                 }
             }
             // Edit UAT
             else if (e.target.closest('.edit-uat-btn')) {
                 const uatId = parseInt(e.target.closest('.edit-uat-btn').dataset.id);
-                // 👇 PERBAIKAN: Menggunakan properti 'uat_data' dari singleUseCaseData
                 const uat = (singleUseCaseData.uat_data || []).find(item => item.id_uat === uatId);
                 if (uat) {
                     openUatDataModal('edit', uat);
                 } else {
-                    // Notifikasi error yang lebih spesifik
                     showNotification('Data UAT yang ingin diedit tidak ditemukan. Mungkin ID tidak cocok.', 'error');
                 }
             }
@@ -397,26 +405,26 @@ document.addEventListener('DOMContentLoaded', () => {
             let url = uatId ? `/api/usecase/uat/${uatId}` : '/api/usecase/uat';
 
             const formData = new FormData(uatDataForm);
-            if (window.getCkEditorDataForUatModal) {
-                formData.set('gambar_uat', window.getCkEditorDataForUatModal('form_gambar_uat'));
+            
+            // Jika tidak ada file baru yang dipilih, tambahkan path gambar lama agar backend tahu
+            if (formGambarUatInput && formGambarUatInput.files.length === 0 && formGambarUatCurrent && formGambarUatCurrent.value) {
+                formData.append('gambar_uat_current', formGambarUatCurrent.value);
             }
-
-            const jsonData = {};
-            formData.forEach((value, key) => {
-                jsonData[key] = value;
-            });
 
             try {
                 const options = {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': csrfToken,
-                        'Content-Type': 'application/json',
+                        // PENTING: Hapus baris 'Content-Type': 'application/json' ini!
+                        // Browser akan otomatis mengatur 'multipart/form-data' saat FormData dikirim dengan file
+                        // 'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(jsonData),
+                    body: formData, // Kirim FormData langsung
                 };
 
                 if (method === 'PUT') {
+                    options.method = 'POST'; // Untuk file upload, sering pakai POST + X-HTTP-Method-Override
                     options.headers['X-HTTP-Method-Override'] = 'PUT';
                 }
 
@@ -455,7 +463,7 @@ document.addEventListener('DOMContentLoaded', () => {
             reportDataFormId.value = '';
         } else if (mode === 'edit' && report) {
             reportDataModalTitle.textContent = 'Edit Data Report';
-            reportDataFormMethod.value = 'PUT';
+            reportDataFormMethod.value = 'PUT'; // Ini tetap PUT karena tidak ada file
             reportDataFormId.value = report.id_report;
 
             document.getElementById('form_aktor_report').value = report.aktor || '';
@@ -484,7 +492,6 @@ document.addEventListener('DOMContentLoaded', () => {
             // View Detail Report
             if (e.target.closest('.view-report-btn')) {
                 const reportId = parseInt(e.target.closest('.view-report-btn').dataset.id);
-                // 👇 PERBAIKAN: Menggunakan properti 'report_data' dari singleUseCaseData
                 const report = (singleUseCaseData.report_data || []).find(item => item.id_report === reportId);
                 if (report) {
                     openDetailDataModal('Detail Data Report', `
@@ -512,7 +519,6 @@ document.addEventListener('DOMContentLoaded', () => {
             // Edit Report
             else if (e.target.closest('.edit-report-btn')) {
                 const reportId = parseInt(e.target.closest('.edit-report-btn').dataset.id);
-                // 👇 PERBAIKAN: Menggunakan properti 'report_data' dari singleUseCaseData
                 const report = (singleUseCaseData.report_data || []).find(item => item.id_report === reportId);
                 if (report) {
                     openReportDataModal('edit', report);
@@ -560,20 +566,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const method = document.getElementById('reportDataFormMethod').value;
             let url = reportId ? `/api/usecase/report/${reportId}` : '/api/usecase/report';
 
-            const formData = new FormData(reportDataForm);
-            const jsonData = {};
-            formData.forEach((value, key) => { jsonData[key] = value; });
+            const formData = new FormData(reportDataForm); // Menggunakan FormData untuk kirim data form
 
             try {
                 const options = {
-                    method: 'POST',
+                    method: 'POST', // Default POST
                     headers: {
                         'X-CSRF-TOKEN': csrfToken,
-                        'Content-Type': 'application/json',
+                        // 'Content-Type' tidak perlu diset jika mengirim FormData
                     },
-                    body: JSON.stringify(jsonData),
+                    body: formData, // Kirim FormData langsung
                 };
                 if (method === 'PUT') {
+                    options.method = 'POST'; // POST dengan X-HTTP-Method-Override untuk PUT dengan FormData
                     options.headers['X-HTTP-Method-Override'] = 'PUT';
                 }
 
@@ -601,6 +606,11 @@ document.addEventListener('DOMContentLoaded', () => {
         databaseDataForm.reset();
         databaseDataFormUseCaseId.value = singleUseCaseData.id || '';
 
+        // Bersihkan pratinjau gambar dan input file
+        if (formGambarDatabaseInput) formGambarDatabaseInput.value = ''; // Clear file input
+        if (formGambarDatabasePreview) formGambarDatabasePreview.innerHTML = ''; // Clear preview area
+        if (formGambarDatabaseCurrent) formGambarDatabaseCurrent.value = ''; // Clear hidden input for current image path
+
         if (!databaseDataFormUseCaseId.value) {
             showNotification('Tidak ada Use Case yang dipilih untuk menambahkan data Database.', 'error');
             return;
@@ -610,27 +620,31 @@ document.addEventListener('DOMContentLoaded', () => {
             databaseDataModalTitle.textContent = 'Tambah Data Database Baru';
             databaseDataFormMethod.value = 'POST';
             databaseDataFormId.value = '';
-            if (window.setCkEditorDataForDatabaseModal) {
-                Object.values(databaseCkEditorElements).forEach(id => window.setCkEditorDataForDatabaseModal(id, ''));
-            }
+            // Hapus CKEditor init di sini
+            // if (window.setCkEditorDataForDatabaseModal) { Object.values(databaseCkEditorElements).forEach(id => window.setCkEditorDataForDatabaseModal(id, '')); }
         } else if (mode === 'edit' && database) {
             databaseDataModalTitle.textContent = 'Edit Data Database';
-            databaseDataFormMethod.value = 'PUT';
+            databaseDataFormMethod.value = 'PUT'; // Tetap POST karena akan pakai FormData (untuk PUT dengan file)
             databaseDataFormId.value = database.id_database;
 
             document.getElementById('form_keterangan_database').value = database.keterangan || '';
             document.getElementById('form_relasi_database').value = database.relasi || '';
 
-            if (window.setCkEditorDataForDatabaseModal) {
-                window.setCkEditorDataForDatabaseModal('form_gambar_database', database.gambar_database || '');
+            // Tampilkan gambar Database yang ada (jika ada)
+            if (formGambarDatabasePreview && database.gambar_database) {
+                formGambarDatabasePreview.innerHTML = `<img src="${database.gambar_database}" alt="Gambar Database" class="max-w-full h-auto rounded">`;
+                formGambarDatabasePreview.classList.remove('hidden'); // Pastikan pratinjau terlihat
+                formGambarDatabaseCurrent.value = database.gambar_database; // Simpan path gambar lama di hidden input
+            } else if (formGambarDatabasePreview) {
+                formGambarDatabasePreview.innerHTML = 'Tidak ada gambar lama.';
+                formGambarDatabasePreview.classList.remove('hidden');
             }
+            // Hapus CKEditor init di sini
+            // if (window.setCkEditorDataForDatabaseModal) { window.setCkEditorDataForDatabaseModal('form_gambar_database', database.gambar_database || ''); }
         }
         databaseDataModal.classList.add('show');
-        setTimeout(() => {
-            if (window.initCkEditorForDatabaseModal) {
-                Object.values(databaseCkEditorElements).forEach(window.initCkEditorForDatabaseModal);
-            }
-        }, 100);
+        // Hapus CKEditor setTimeout init di sini
+        // setTimeout(() => { if (window.initCkEditorForDatabaseModal) { Object.values(databaseCkEditorElements).forEach(window.initCkEditorForDatabaseModal); } }, 100);
     };
 
     const closeDatabaseDataModal = () => {
@@ -652,7 +666,6 @@ document.addEventListener('DOMContentLoaded', () => {
             // View Detail Database
             if (e.target.closest('.view-database-btn')) {
                 const databaseId = parseInt(e.target.closest('.view-database-btn').dataset.id);
-                // 👇 PERBAIKAN: Menggunakan properti 'database_data' dari singleUseCaseData
                 const database = (singleUseCaseData.database_data || []).find(item => item.id_database === databaseId);
                 if (database) {
                     openDetailDataModal('Detail Data Database', `
@@ -666,7 +679,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <div class="detail-item">
                             <label>Gambar Database:</label>
-                            <div class="ck-content">${database.gambar_database || 'Tidak ada gambar'}</div>
+                            ${database.gambar_database ? `<img src="${database.gambar_database}" alt="Gambar Database" class="max-w-full h-auto rounded">` : '<p>Tidak ada gambar</p>'}
                         </div>
                         <div class="detail-item">
                             <label>Relasi:</label>
@@ -680,7 +693,6 @@ document.addEventListener('DOMContentLoaded', () => {
             // Edit Database
             else if (e.target.closest('.edit-database-btn')) {
                 const databaseId = parseInt(e.target.closest('.edit-database-btn').dataset.id);
-                // 👇 PERBAIKAN: Menggunakan properti 'database_data' dari singleUseCaseData
                 const database = (singleUseCaseData.database_data || []).find(item => item.id_database === databaseId);
                 if (database) {
                     openDatabaseDataModal('edit', database);
@@ -719,34 +731,50 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    if (databaseDataForm) {
+        databaseDataForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
 
-    // --- Tab Switching Logic ---
-    const contentTabsContainer = document.getElementById('content-tabs');
-    const contentPanels = document.querySelectorAll('.content-panel');
+            const loadingNotif = showNotification('Menyimpan data Database...', 'loading');
+            const databaseId = document.getElementById('databaseDataFormId').value;
+            const method = document.getElementById('databaseDataFormMethod').value;
+            let url = databaseId ? `/api/usecase/database/${databaseId}` : '/api/usecase/database';
 
-    if (contentTabsContainer) {
-        contentTabsContainer.addEventListener('click', (e) => {
-            if (e.target.classList.contains('tab-button')) {
-                const clickedTab = e.target;
-                const contentType = clickedTab.dataset.contentType;
+            const formData = new FormData(databaseDataForm); // Menggunakan FormData langsung
+            // Jika tidak ada file baru yang dipilih, tambahkan path gambar lama agar backend tahu
+            if (formGambarDatabaseInput && formGambarDatabaseInput.files.length === 0 && formGambarDatabaseCurrent && formGambarDatabaseCurrent.value) {
+                formData.append('gambar_database_current', formGambarDatabaseCurrent.value);
+            }
 
-                contentTabsContainer.querySelectorAll('.tab-button').forEach(btn => {
-                    btn.classList.remove('active');
-                });
-                clickedTab.classList.add('active');
+            try {
+                const options = {
+                    method: 'POST', // Default POST, akan di-override jika PUT
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        // 'Content-Type' TIDAK perlu diset karena mengirim FormData dengan file
+                    },
+                    body: formData, // Mengirim FormData langsung
+                };
 
-                contentPanels.forEach(panel => {
-                    panel.classList.add('hidden');
-                });
+                if (method === 'PUT') {
+                    options.method = 'POST'; // Untuk file upload, sering pakai POST + X-HTTP-Method-Override
+                    options.headers['X-HTTP-Method-Override'] = 'PUT';
+                }
 
-                document.getElementById(`content-${contentType}`).classList.remove('hidden');
+                const data = await fetchAPI(url, options);
 
-                const url = new URL(window.location);
-                url.searchParams.set('content_type', contentType);
-                window.history.pushState({}, '', url);
+                hideNotification(loadingNotif);
+                showCentralSuccessPopup(data.success);
+                closeDatabaseDataModal();
+                window.location.reload();
+            } catch (error) {
+                console.error('Error saving Database data:', error);
+                hideNotification(loadingNotif);
+                showNotification(`Gagal menyimpan data Database: ${error.message || 'Terjadi kesalahan'}`, 'error');
             }
         });
     }
+
 
     // --- Global Functions for Detail Modal ---
     function openDetailDataModal(title, contentHtml) {

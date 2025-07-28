@@ -27,7 +27,12 @@
             </div>
             <div class="md:col-span-2">
                 <p class="font-semibold text-gray-700">Gambar Database:</p>
-                <div class="prose max-w-none">{!! $databaseData->gambar_database ?? 'Tidak ada gambar' !!}</div>
+                @if ($databaseData->gambar_database)
+                    {{-- BARIS KODE YANG HARUS DIPERHATIKAN: Menampilkan gambar dengan tag <img> --}}
+                    <img src="{{ asset($databaseData->gambar_database) }}" alt="Gambar Database" class="max-w-full h-auto rounded-lg shadow-md mt-2">
+                @else
+                    <p class="prose max-w-none">Tidak ada gambar</p>
+                @endif
             </div>
             <div class="md:col-span-2">
                 <p class="font-semibold text-gray-700">Relasi:</p>

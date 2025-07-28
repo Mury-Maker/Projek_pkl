@@ -140,7 +140,6 @@ class UseCaseController extends Controller
 
     public function updateUatData(Request $request, UatData $uatData)
     {
-        dd($uatData);
         // Validasi input
         $request->validate([
             'nama_proses_usecase' => 'required|string|max:255', // Ini sekarang akan dari input form
@@ -177,85 +176,39 @@ class UseCaseController extends Controller
         }
     }
 
-    // --- CRUD untuk ReportData (sebelumnya PengkodeanData) ---
-    public function storeReportData(Request $request) // Ubah nama metode
-    {
-        $request->validate([
-            'use_case_id' => 'required|exists:use_cases,id',
-            'aktor' => 'required|string|max:255', // Kolom baru
-            'nama_report' => 'required|string|max:255', // Kolom baru
-            'keterangan' => 'nullable|string', // Kolom baru
-        ]);
-
-        try {
-            $useCase = UseCase::findOrFail($request->use_case_id);
-            
-            $reportData = $useCase->reportData()->create([ // Ubah relasi
-                'aktor' => $request->aktor,
-                'nama_report' => $request->nama_report,
-                'keterangan' => $request->keterangan,
-            ]);
-
-            return response()->json(['success' => 'Data Report berhasil ditambahkan!', 'report_data' => $reportData]);
-        } catch (\Exception $e) {
-            Log::error('Gagal menyimpan data Report: ' . $e->getMessage());
-            return response()->json(['message' => 'Gagal menyimpan data Report.', 'error' => $e->getMessage()], 500);
-        }
-    }
-
-    public function updateReportData(Request $request, ReportData $reportData) // Ubah nama metode
-    {
-        $request->validate([
-            'aktor' => 'required|string|max:255',
-            'nama_report' => 'required|string|max:255',
-            'keterangan' => 'nullable|string',
-        ]);
-
-        try {
-            $reportData->update([ // Ubah model
-                'aktor' => $request->aktor,
-                'nama_report' => $request->nama_report,
-                'keterangan' => $request->keterangan,
-            ]);
-
-            return response()->json(['success' => 'Data Report berhasil diperbarui!', 'report_data' => $reportData]);
-        } catch (\Exception $e) {
-            Log::error('Gagal memperbarui data Report: ' . $e->getMessage());
-            return response()->json(['message' => 'Gagal memperbarui data Report.', 'error' => $e->getMessage()], 500);
-        }
-    }
-
-    public function destroyReportData(ReportData $reportData) // Ubah nama metode
-    {
-        try {
-            $reportData->delete(); // Ubah model
-            return response()->json(['success' => 'Data Report berhasil dihapus!']);
-        } catch (\Exception $e) {
-            Log::error('Gagal menghapus data Report: ' . $e->getMessage());
-            return response()->json(['message' => 'Gagal menghapus data Report.', 'error' => $e->getMessage()], 500);
-        }
-    }
-
     // --- CRUD untuk DatabaseData ---
     public function storeDatabaseData(Request $request)
     {
         $request->validate([
             'use_case_id' => 'required|exists:use_cases,id',
             'keterangan' => 'nullable|string',
-            'gambar_database' => 'nullable|string', // CKEditor content is string (HTML)
+            'gambar_database' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // <-- VALIDASI FILE UNTUK DATABASE
             'relasi' => 'nullable|string',
         ]);
 
         try {
             $useCase = UseCase::findOrFail($request->use_case_id);
             
+            $imagePath = null;
+            if ($request->hasFile('gambar_database')) {
+                $path = $request->file('gambar_database')->store('database_images', 'public');
+                $imagePath = '/storage/' . $path; 
+            }
+
             $databaseData = $useCase->databaseData()->create([
                 'keterangan' => $request->keterangan,
-                'gambar_database' => $request->gambar_database, // Simpan HTML dari CKEditor
+                'gambar_database' => $imagePath, 
                 'relasi' => $request->relasi,
             ]);
 
-            return response()->json(['success' => 'Data Database berhasil ditambahkan!', 'database_data' => $databaseData]);
+            return response()->json(['success' => 'Data Database berhasil ditambahkan!', 'database_data' => $databaseData], 201);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Validasi gagal saat menyimpan data Database: ' . $e->getMessage(), ['errors' => $e->errors()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Validasi Gagal!',
+                'errors' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
             Log::error('Gagal menyimpan data Database: ' . $e->getMessage());
             return response()->json(['message' => 'Gagal menyimpan data Database.', 'error' => $e->getMessage()], 500);
@@ -266,18 +219,49 @@ class UseCaseController extends Controller
     {
         $request->validate([
             'keterangan' => 'nullable|string',
-            'gambar_database' => 'nullable|string', // CKEditor content is string (HTML)
+            'gambar_database' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048', // <-- VALIDASI FILE UNTUK DATABASE
             'relasi' => 'nullable|string',
+            'gambar_database_current' => 'nullable|string', // Untuk path gambar lama jika tidak ada upload baru
         ]);
 
         try {
+            $imagePath = $databaseData->gambar_database; // Default: pertahankan gambar lama
+
+            if ($request->hasFile('gambar_database')) {
+                if ($imagePath) { 
+                    $oldPath = str_replace('/storage/', 'public/', $imagePath); 
+                    if (Storage::disk('public')->exists($oldPath)) {
+                        Storage::disk('public')->delete($oldPath);
+                    }
+                }
+                $path = $request->file('gambar_database')->store('database_images', 'public');
+                $imagePath = '/storage/' . $path;
+            } else if ($request->filled('gambar_database_current')) {
+                $imagePath = $request->input('gambar_database_current');
+            } else {
+                if ($imagePath) { 
+                    $oldPath = str_replace('/storage/', 'public/', $imagePath);
+                    if (Storage::disk('public')->exists($oldPath)) {
+                        Storage::disk('public')->delete($oldPath);
+                    }
+                }
+                $imagePath = null;
+            }
+
             $databaseData->update([
                 'keterangan' => $request->keterangan,
-                'gambar_database' => $request->gambar_database, // Simpan HTML dari CKEditor
+                'gambar_database' => $imagePath, 
                 'relasi' => $request->relasi,
             ]);
 
             return response()->json(['success' => 'Data Database berhasil diperbarui!', 'database_data' => $databaseData]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Validasi gagal saat memperbarui data Database: ' . $e->getMessage(), ['errors' => $e->errors()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Validasi Gagal!',
+                'errors' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
             Log::error('Gagal memperbarui data Database: ' . $e->getMessage());
             return response()->json(['message' => 'Gagal memperbarui data Database.', 'error' => $e->getMessage()], 500);
@@ -287,6 +271,12 @@ class UseCaseController extends Controller
     public function destroyDatabaseData(DatabaseData $databaseData)
     {
         try {
+            if ($databaseData->gambar_database) { 
+                $pathToDelete = str_replace('/storage/', 'public/', $databaseData->gambar_database); 
+                if (Storage::disk('public')->exists($pathToDelete)) {
+                    Storage::disk('public')->delete($pathToDelete);
+                }
+            }
             $databaseData->delete();
             return response()->json(['success' => 'Data Database berhasil dihapus!']);
         } catch (\Exception $e) {
