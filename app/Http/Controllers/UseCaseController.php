@@ -219,7 +219,7 @@ class UseCaseController extends Controller
     {
         $request->validate([
             'keterangan' => 'nullable|string',
-            'gambar_database' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // <-- VALIDASI FILE UNTUK DATABASE
+            'gambar_database' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048', // <-- VALIDASI FILE UNTUK DATABASE
             'relasi' => 'nullable|string',
             'gambar_database_current' => 'nullable|string', // Untuk path gambar lama jika tidak ada upload baru
         ]);

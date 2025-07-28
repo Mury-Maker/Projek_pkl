@@ -624,7 +624,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // if (window.setCkEditorDataForDatabaseModal) { Object.values(databaseCkEditorElements).forEach(id => window.setCkEditorDataForDatabaseModal(id, '')); }
         } else if (mode === 'edit' && database) {
             databaseDataModalTitle.textContent = 'Edit Data Database';
-            databaseDataFormMethod.value = 'POST'; // Tetap POST karena akan pakai FormData (untuk PUT dengan file)
+            databaseDataFormMethod.value = 'PUT'; // Tetap POST karena akan pakai FormData (untuk PUT dengan file)
             databaseDataFormId.value = database.id_database;
 
             document.getElementById('form_keterangan_database').value = database.keterangan || '';
