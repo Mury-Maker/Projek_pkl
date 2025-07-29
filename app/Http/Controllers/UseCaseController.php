@@ -115,7 +115,6 @@ class UseCaseController extends Controller
             'use_case_id' => 'required|exists:use_cases,id',
             'keterangan_uat' => 'nullable|string',
             'status_uat' => 'nullable|string|in:success,failed,pending',
-            'gambar_uat' => 'nullable|string', // CKEditor content is string (HTML)
         ]);
 
         try {
@@ -128,7 +127,6 @@ class UseCaseController extends Controller
                 'nama_proses_usecase' => $namaProsesUseCase, // Simpan nama proses dari UseCase
                 'keterangan_uat' => $request->keterangan_uat,
                 'status_uat' => $request->status_uat,
-                'gambar_uat' => $request->gambar_uat, // Simpan HTML dari CKEditor
             ]);
 
             return response()->json(['success' => 'Data UAT berhasil ditambahkan!', 'uat_data' => $uatData]);
@@ -182,22 +180,13 @@ class UseCaseController extends Controller
         $request->validate([
             'use_case_id' => 'required|exists:use_cases,id',
             'keterangan' => 'nullable|string',
-            'gambar_database' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // <-- VALIDASI FILE UNTUK DATABASE
             'relasi' => 'nullable|string',
         ]);
 
         try {
             $useCase = UseCase::findOrFail($request->use_case_id);
-            
-            $imagePath = null;
-            if ($request->hasFile('gambar_database')) {
-                $path = $request->file('gambar_database')->store('database_images', 'public');
-                $imagePath = '/storage/' . $path; 
-            }
-
             $databaseData = $useCase->databaseData()->create([
                 'keterangan' => $request->keterangan,
-                'gambar_database' => $imagePath, 
                 'relasi' => $request->relasi,
             ]);
 
@@ -282,6 +271,79 @@ class UseCaseController extends Controller
         } catch (\Exception $e) {
             Log::error('Gagal menghapus data Database: ' . $e->getMessage());
             return response()->json(['message' => 'Gagal menghapus data Database.', 'error' => $e->getMessage()], 500);
+        }
+    }
+
+        // --- CRUD untuk ReportData ---
+    public function storeReportData(Request $request)
+    {
+        $request->validate([
+            'use_case_id' => 'required|exists:use_cases,id',
+            'aktor' => 'required|string|max:255',
+            'nama_report' => 'required|string|max:255',
+            'keterangan' => 'nullable|string',
+        ]);
+
+        try {
+            $useCase = UseCase::findOrFail($request->use_case_id);
+            
+            $reportData = $useCase->reportData()->create([
+                'aktor' => $request->aktor,
+                'nama_report' => $request->nama_report,
+                'keterangan' => $request->keterangan,
+            ]);
+
+            return response()->json(['success' => 'Data Report berhasil ditambahkan!', 'report_data' => $reportData]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Validasi gagal saat menyimpan data Report: ' . $e->getMessage(), ['errors' => $e->errors()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Validasi Gagal!',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Gagal menyimpan data Report: ' . $e->getMessage());
+            return response()->json(['message' => 'Gagal menyimpan data Report.', 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function updateReportData(Request $request, ReportData $reportData)
+    {
+        $request->validate([
+            'aktor' => 'required|string|max:255',
+            'nama_report' => 'required|string|max:255',
+            'keterangan' => 'nullable|string',
+        ]);
+
+        try {
+            $reportData->update([
+                'aktor' => $request->aktor,
+                'nama_report' => $request->nama_report,
+                'keterangan' => $request->keterangan,
+            ]);
+
+            return response()->json(['success' => 'Data Report berhasil diperbarui!', 'report_data' => $reportData]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Validasi gagal saat memperbarui data Report: ' . $e->getMessage(), ['errors' => $e->errors()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Validasi Gagal!',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Gagal memperbarui data Report: ' . $e->getMessage());
+            return response()->json(['message' => 'Gagal memperbarui data Report.', 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function destroyReportData(ReportData $reportData)
+    {
+        try {
+            $reportData->delete();
+            return response()->json(['success' => 'Data Report berhasil dihapus!']);
+        } catch (\Exception $e) {
+            Log::error('Gagal menghapus data Report: ' . $e->getMessage());
+            return response()->json(['message' => 'Gagal menghapus data Report.', 'error' => $e->getMessage()], 500);
         }
     }
 }

@@ -16,8 +16,11 @@ class UatData extends Model
         'nama_proses_usecase',
         'keterangan_uat',
         'status_uat',
-        'gambar_uat',
     ];
+
+    public function uatImages(){
+        return $this->hasMany(UAT_IMAGES::class);
+    }
 
     public function useCase()
     {

@@ -101,7 +101,7 @@
                 
                 {{-- Report Data Section --}}
                 <hr class="my-6 border-gray-200">
-                <h2 class="text-2xl font-bold mb-4 text-gray-800 text-center">Report Data</h2>
+                <h2 class="text-2xl font-bold mb-4 text-gray-800">Report Data</h2>
                 <div id="content-Report" class="mb-8">
                     <div class="flex flex-col items-start mb-4">
                         @auth
@@ -134,7 +134,7 @@
                                         <td class="py-2 px-4 whitespace-nowrap text-sm text-gray-900">{{ $loop->iteration }}</td>
                                         <td class="py-2 px-4 whitespace-nowrap text-sm text-gray-900">{{ $report['aktor'] }}</td>
                                         <td class="py-2 px-4 whitespace-nowrap text-sm text-gray-900">{{ $report['nama_report'] }}</td>
-                                        <td class="py-2 px-4 text-sm text-gray-900 prose max-w-prose">{!! $report['keterangan'] !!}</td>
+                                        <td class="py-2 px-4 text-sm text-gray-900 prose max-w-[200px] truncate whitespace-normal">{!! $report['keterangan'] !!}</td>
                                         <td class="py-2 px-4 whitespace-nowrap text-center text-sm font-medium flex justify-center items-center space-x-2">
                                             @auth
                                                 @if(auth()->user()->role === 'admin')
@@ -181,7 +181,7 @@
 
                 {{-- Database Data Section --}}
                 <hr class="my-6 border-gray-200">
-                <h2 class="text-2xl font-bold mb-4 text-gray-800 text-center">Database Data</h2>
+                <h2 class="text-2xl font-bold mb-4 text-gray-800">Database Data</h2>
                 <div id="content-Database" class="mb-8">
                     <div class="flex flex-col items-start mb-4">
                         @auth
@@ -211,7 +211,7 @@
                                 @forelse($currentUseCase['database_data'] as $database)
                                     <tr data-id="{{ $database['id_database'] }}" class="hover:bg-gray-50">
                                         <td class="py-2 px-4 whitespace-nowrap text-sm text-gray-900">{{ $loop->iteration }}</td>
-                                        <td class="py-2 px-4 text-sm text-gray-900 prose max-w-prose">{!! $database['keterangan'] !!}</td>  
+                                        <td class="py-2 px-4 text-sm text-gray-900 prose max-w-[200px] truncate whitespace-normal">{!! $database['keterangan'] !!}</td>  
                                         <td class="py-2 px-4 text-sm text-gray-900 prose max-w-prose">{!! $database['relasi'] !!}</td>
                                         <td class="py-2 px-4 whitespace-nowrap text-center text-sm font-medium flex justify-center items-center space-x-2">
                                             @auth
@@ -259,7 +259,7 @@
 
                 {{-- UAT Data Section --}}
                 <hr class="my-6 border-gray-200">
-                <h2 class="text-2xl font-bold mb-4 text-gray-800 text-center">UAT Data</h2>
+                <h2 class="text-2xl font-bold mb-4 text-gray-800">UAT Data</h2>
                 <div id="content-UAT" class="mb-8">
                     <div class="flex flex-col items-start mb-4">
                         @auth
@@ -291,7 +291,7 @@
                                     <tr data-id="{{ $uat['id_uat'] }}" class="hover:bg-gray-50">
                                         <td class="py-2 px-4 whitespace-nowrap text-sm text-gray-900">{{ $loop->iteration }}</td>
                                         <td class="py-2 px-4 whitespace-nowrap text-sm text-gray-900">{{ $uat['nama_proses_usecase'] }}</td>
-                                        <td class="py-2 px-4 text-sm text-gray-900 prose max-w-prose">{!! $uat['keterangan_uat'] !!}</td>
+                                        <td class="py-2 px-4 text-sm text-gray-900 prose max-w-[200px] truncate whitespace-normal">{!! $uat['keterangan_uat'] !!}</td>
                                         <td class="py-2 px-4 whitespace-nowrap text-sm text-gray-900">
                                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
                                                 @if($uat['status_uat'] === 'Passed') bg-green-100 text-green-800

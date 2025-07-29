@@ -25,10 +25,6 @@
                     <option value="pending">Pending</option>
                 </select>
             </div>
-            <div class="mb-4">
-                <label for="form_gambar_uat" class="block text-gray-700 text-sm font-bold mb-2">Gambar UAT (CKEditor):</label> {{-- Ubah label --}}
-                <textarea id="form_gambar_uat" name="gambar_uat" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 ckeditor-small"></textarea> {{-- Ubah type menjadi textarea dan CKEditor --}}
-            </div>
 
             <div class="flex items-center justify-end space-x-3 mt-6">
                 <button type="button" id="cancelUatDataFormBtn" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400">Batal</button>

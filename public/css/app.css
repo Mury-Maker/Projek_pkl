@@ -6,6 +6,7 @@ body {
 }
 
 /* --- Gaya Prosa (CKEditor) --- */
+
 .prose h1 {
     font-size: 1.875rem;
     font-weight: 700;
@@ -143,6 +144,12 @@ body {
 }
 .modal.show .modal-content {
     transform: translateY(0);
+}
+
+#desc-usecase{
+    background-color: black;
+    display: flex;
+    color: red;
 }
 
 /* --- Pop-up Sukses Tengah --- */

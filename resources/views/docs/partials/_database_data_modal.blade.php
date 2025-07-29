@@ -14,15 +14,6 @@
                 <textarea id="form_keterangan_database" name="keterangan" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 h-24 resize-y"></textarea>
             </div>
             <div class="mb-4">
-                <label for="form_gambar_database" class="block text-gray-700 text-sm font-bold mb-2">Gambar Database:</label> {{-- Label diubah --}}
-                <input type="file" id="form_gambar_database" name="gambar_database" accept="image/*" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"> {{-- Input file baru --}}
-                <p class="text-xs text-gray-500 mt-1">Ukuran maksimal 2MB. Format: JPG, PNG, GIF.</p>
-                {{-- Area Pratinjau Gambar --}}
-                <div id="form_gambar_database_preview" class="mt-2 border border-gray-200 rounded p-2 text-center bg-gray-50 flex justify-center items-center h-24 overflow-hidden">
-                    <span class="text-gray-500 text-sm">Tidak ada gambar dipilih atau gambar lama.</span>
-                </div>
-            </div>
-            <div class="mb-4">
                 <label for="form_relasi_database" class="block text-gray-700 text-sm font-bold mb-2">Relasi:</label>
                 <textarea id="form_relasi_database" name="relasi" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 h-24 resize-y"></textarea>
             </div>

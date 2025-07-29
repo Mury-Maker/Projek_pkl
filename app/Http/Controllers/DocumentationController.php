@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\ReportData;
 use App\Models\UatData;
 use App\Models\DatabaseData;
+use App\Models\DATABASE_IMAGES;
+use App\Models\UAT_IMAGES;
 
 
 
@@ -35,7 +37,7 @@ class DocumentationController extends Controller
                                    ->where('menu_status', 1) // Prioritaskan menu dengan konten
                                    ->orderBy('menu_order', 'asc')
                                    ->first();
-
+        
         if ($firstContentMenu) {
             return redirect()->route('docs', [
                 'category' => $defaultCategory,
@@ -190,6 +192,8 @@ class DocumentationController extends Controller
                           ->where('id_uat', $uatId)
                           ->firstOrFail();
 
+        $uatImgs = UAT_IMAGES::where('uats_id', $uatData->id_uat)->get();
+
         // Siapkan data untuk view
         $allMenus = NavMenu::where('category', $category)->orderBy('menu_order')->get();
         $navigation = NavMenu::buildTree($allMenus);
@@ -206,6 +210,7 @@ class DocumentationController extends Controller
             'categories'        => $categories,
             'uatData'           => $uatData, // Kirim objek UatData
             'parentUseCase'     => $useCase, // Kirim UseCase induk jika perlu informasi tambahan
+            'uatImgs'           => $uatImgs, // Mengirim data gambar yang dimiliki uat tersebut
         ]);
     }
 
@@ -278,6 +283,8 @@ class DocumentationController extends Controller
         $databaseData = DatabaseData::where('use_case_id', $useCase->id)
                                     ->where('id_database', $databaseId)
                                     ->firstOrFail();
+        
+        $databaseImg = DATABASE_IMAGES::where('databases_id', $databaseData->id_database)->get();
 
         $allMenus = NavMenu::where('category', $category)->orderBy('menu_order')->get();
         $navigation = NavMenu::buildTree($allMenus);
@@ -294,6 +301,7 @@ class DocumentationController extends Controller
             'categories'        => $categories,
             'databaseData'      => $databaseData, // Kirim objek DatabaseData
             'parentUseCase'     => $useCase,
+            'databaseImg'       => $databaseImg,
         ]);
     }
 

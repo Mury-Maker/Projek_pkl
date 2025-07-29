@@ -17,7 +17,6 @@ return new class extends Migration
             $table->string('nama_proses_usecase'); // <-- LANGSUNG GUNAKAN NAMA KOLOM YANG BENAR
             $table->text('keterangan_uat')->nullable();
             $table->string('status_uat')->nullable(); // Misal: 'success', 'failed', 'pending'
-            $table->longText('gambar_uat')->nullable(); // <-- LANGSUNG GUNAKAN LONGTEXT DAN NAMA KOLOM YANG BENAR
             $table->timestamps();
         });
     }
