@@ -10,13 +10,16 @@ class DatabaseData extends Model
     use HasFactory;
 
     protected $table = 'database_data';
-    protected $primaryKey = 'id_database'; // ✅ Correct
+    protected $primaryKey = 'id_database';
     protected $fillable = [
         'use_case_id',
         'keterangan',
-        'gambar_database',
         'relasi',
     ];
+
+    public function databaseImage(){
+        return $this->hasMany(DATABASE_IMAGES::class);
+    }
 
     public function useCase()
     {

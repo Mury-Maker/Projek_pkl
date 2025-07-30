@@ -33,28 +33,28 @@
                 </div>
                 <div class="mb-4">
                     <label for="form_tujuan" class="block text-gray-700 text-sm font-bold mb-2">Tujuan:</label>
-                    <textarea id="form_tujuan" name="tujuan" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 ckeditor-small"></textarea>
+                    <input id="form_tujuan" name="tujuan" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 ckeditor-small"></input>
                 </div>
 
                 {{-- Kondisi Awal (Mengambil 2 kolom) --}}
                 <div class="mb-4 md:col-span-2">
                     <label for="form_kondisi_awal" class="block text-gray-700 text-sm font-bold mb-2">Kondisi Awal:</label>
-                    <textarea id="form_kondisi_awal" name="kondisi_awal" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 ckeditor-small"></textarea>
+                    <input id="form_kondisi_awal" name="kondisi_awal" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 ckeditor-small"></input>
                 </div>
                 {{-- Kondisi Akhir (Mengambil 2 kolom) --}}
                 <div class="mb-4 md:col-span-2">
                     <label for="form_kondisi_akhir" class="block text-gray-700 text-sm font-bold mb-2">Kondisi Akhir:</label>
-                    <textarea id="form_kondisi_akhir" name="kondisi_akhir" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 ckeditor-small"></textarea>
+                    <input id="form_kondisi_akhir" name="kondisi_akhir" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 ckeditor-small"></input>
                 </div>
                 {{-- Aksi Reaksi (Mengambil 2 kolom) --}}
                 <div class="mb-4 md:col-span-2">
-                    <label for="form_aksi_reaksi" class="block text-gray-700 text-sm font-bold mb-2">Aksi Reaksi:</label>
-                    <textarea id="form_aksi_reaksi" name="aksi_reaksi" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 ckeditor-small"></textarea>
+                    <label for="form_aksi_reaksi" class="block text-gray-700 text-sm font-bold mb-2">Aksi Aktor:</label>
+                    <input id="form_aksi_reaksi" name="aksi_reaksi" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 ckeditor-small"></input>
                 </div>
                 {{-- Reaksi Sistem (Mengambil 2 kolom) --}}
                 <div class="mb-4 md:col-span-2">
                     <label for="form_reaksi_sistem" class="block text-gray-700 text-sm font-bold mb-2">Reaksi Sistem:</label>
-                    <textarea id="form_reaksi_sistem" name="reaksi_sistem" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 ckeditor-small"></textarea>
+                    <input id="form_reaksi_sistem" name="reaksi_sistem" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 ckeditor-small"></input>
                 </div>
             </div>
 

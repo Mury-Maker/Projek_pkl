@@ -225,6 +225,7 @@
     <script src="{{ asset('js/search-logic.js') }}"></script>
     <script src="{{ asset('js/category-dropdown.js') }}"></script>
     <script src="{{ asset('js/logout-form.js') }}"></script>
+    <script src="{{ asset('js/images.js') }}" ></script>
 
     @auth
         @if(auth()->user()->role === 'admin')

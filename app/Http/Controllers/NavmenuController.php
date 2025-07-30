@@ -283,7 +283,7 @@ class NavmenuController extends Controller
 
         DB::transaction(function () use ($newCategorySlug, $displayCategoryName, &$newlyCreatedMenu) {
             $menu = NavMenu::create([
-                'menu_nama' => 'Beranda ' . $displayCategoryName,
+                'menu_nama' => 'Dashboard ' . $displayCategoryName,
                 'menu_link' => $newCategorySlug . '/beranda-' . Str::slug($displayCategoryName),
                 'menu_icon' => 'fa-solid fa-home',
                 'menu_child' => 0,
@@ -297,7 +297,7 @@ class NavmenuController extends Controller
             // Buat UseCase default "Pengantar" untuk halaman beranda kategori baru
             UseCase::create([
                 'menu_id' => $menu->menu_id,
-                'usecase_id' => 'INFO-BERANDA',
+                'usecase_id' => 'Dashboard',
                 'nama_proses' => 'Informasi Umum',
                 'deskripsi_aksi' => '# Informasi Umum Kategori ' . $displayCategoryName . "\n\nIni adalah informasi pengantar untuk kategori ini. Anda dapat menambahkan tindakan-tindakan lain (use cases) di sini.",
                 'aktor' => 'Sistem',

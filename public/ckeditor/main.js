@@ -372,4 +372,4 @@ window.CKEDITOR_CONFIG = { // Changed from `editorConfig` to `window.CKEDITOR_CO
 
 // If you want to initialize an editor immediately, you'd do it here.
 // For this application, the initialization is handled in `index.blade.php` based on user role.
-// ClassicEditor.create(document.querySelector('#editor'), editorConfig);
+ClassicEditor.create(document.querySelectorAll('.ck-editor'), editorConfig);

@@ -65,7 +65,7 @@
 {{-- Navigasi Utama --}}
     {{-- Tombol "Tambah Menu Baru" hanya untuk admin --}}
     @auth
-        @if(auth()->user()->role === 'admin')
+ 
             <div class="flex justify-between items-center mb-4">
                 {{-- Batasi tampilan nama kategori di judul kiri header --}}
                 <div class="container-judul">
@@ -83,7 +83,7 @@
                    <span class="truncate-text">Dokumentasi</span>
                 </a>
                 {{-- END JUDUL --}}
-
+            @if(auth()->user()->role === 'admin')
                 {{-- BUTTON TAMBAH --}}
                 <button id="add-parent-menu-btn" class="bg-blue-500 text-white w-8 h-8 rounded-lg w-full flex items-center justify-center hover:bg-blue-600 transition-colors" title="Tambah Menu Utama Baru">
                     <i class="fa fa-plus"></i>
@@ -94,8 +94,6 @@
                 </div>
 
             </div>
-        @else
-            <h2 class="text-lg font-semibold text-gray-800 mb-4">Navigasi</h2>
         @endif
     @endauth
     @guest

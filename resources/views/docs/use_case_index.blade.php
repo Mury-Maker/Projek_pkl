@@ -25,8 +25,8 @@
                 @endif
             @endauth
 
-            <div class="overflow-x-auto min-h-[500px] max-h-[80vh]">
-                <table class="min-w-full bg-white border border-gray-300 text-sm text-left">
+            <div class="overflow-x-auto max-w-[100vw] min-h-[500px] max-h-[80vh]">
+                <table class="max-w-[100vw] bg-white border border-gray-300 text-sm text-left">
                     <thead class="bg-gray-100">
                         <tr>
                             <th class="py-2 px-4 border-r border-b">No</th>
@@ -41,10 +41,10 @@
                         @forelse($useCases as $useCase)
                             <tr class="hover:bg-gray-50 transition">
                                 <td class="py-2 px-4 border-r border-b">{{ $loop->iteration }}</td>
-                                <td class="py-2 px-4 border-r border-b">{{ $useCase->nama_proses }}</td>
-                                <td class="py-2 px-4 border-r border-b">{{ $useCase->aktor }}</td>
-                                <td class="py-2 px-4 border-r border-b">{!! $useCase->kondisi_awal !!}</td>
-                                <td class="py-2 px-4 border-r border-b">{!! $useCase->kondisi_akhir !!}</td>
+                                <td class="py-2 px-4 text-sm text-gray-900 max-w-[200px] truncate whitespace-normal">{{ $useCase->nama_proses }}</td>
+                                <td class="py-2 px-4 text-sm text-gray-900 max-w-[200px] truncate whitespace-normal">{{ $useCase->aktor }}</td>
+                                <td class="py-2 px-4 text-sm text-gray-900 max-w-[200px] truncate whitespace-normal">{!! $useCase->kondisi_awal !!}</td>
+                                <td class="py-2 px-4 text-sm text-gray-900 max-w-[200px] truncate whitespace-normal">{!! $useCase->kondisi_akhir !!}</td>
                                 <td class="py-2 px-4 border-b text-center align-middle w-36 max-w-[9rem]">
                                     @auth
                                         <div class="relative inline-block text-left" id="dropdown-wrapper-{{ $useCase->id }}">

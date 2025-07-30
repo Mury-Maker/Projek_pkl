@@ -15,7 +15,6 @@ return new class extends Migration
             $table->id('id_database'); // Kolom id_database
             $table->foreignId('use_case_id')->constrained('use_cases')->onDelete('cascade');
             $table->text('keterangan')->nullable(); // Kolom keterangan
-            $table->longText('gambar_database')->nullable(); // Menggunakan LONGTEXT untuk gambar CKEditor (HTML/base64)
             $table->text('relasi')->nullable(); // Kolom relasi (teks)
             $table->timestamps();
         });

@@ -49,7 +49,7 @@
                 <p class="prose max-w-none">{!! $currentUseCase->kondisi_akhir ?? 'N/A' !!}</p>
             </div>
             <div class="md:col-span-2">
-                <p class="font-semibold text-gray-700">Aksi Reaksi:</p>
+                <p class="font-semibold text-gray-700">Aksi Aktor:</p>
                 <p class="prose max-w-none">{!! $currentUseCase->aksi_reaksi ?? 'N/A' !!}</p>
             </div>
             <div class="md:col-span-2">

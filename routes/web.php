@@ -6,7 +6,10 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DocumentationController;
 use App\Http\Controllers\CKEditorController;
 use App\Http\Controllers\NavmenuController;
+use App\Http\Controllers\UAT_Image;
+use App\Http\Controllers\Databases_Images;
 use App\Http\Controllers\UseCaseController;
+use App\Models\UAT_IMAGES;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 
@@ -36,6 +39,14 @@ Route::middleware('auth')->group(function () {
     // 👇 Rute Baru untuk Detail Halaman UAT Data 👇
     Route::get('/docs/{category}/{page}/{useCaseSlug}/uat/{uatId}', [DocumentationController::class, 'showUatDetailPage'])
          ->name('docs.use_case_uat_detail_page');
+
+    // Gambar Pada UAT
+    Route::post('/uats/store-images', [UAT_Image::class, 'storeImages'])->name('uats.storeImages');
+    Route::delete('/uats/images/{id}', [UAT_Image::class, 'deleteImage'])->name('uats.deleteImage');
+
+    // Gambar Pada Database
+    Route::post('/databases/store-images', [Databases_Images::class, 'storeImages'])->name('databases.storeImages');
+    Route::delete('/databases/images/{id}', [Databases_Images::class, 'deleteImages'])->name('databases.deleteImages');
 
     // 👇 Rute Baru untuk Detail Halaman Report Data 👇
     Route::get('/docs/{category}/{page}/{useCaseSlug}/report/{reportId}', [DocumentationController::class, 'showReportDetailPage'])
