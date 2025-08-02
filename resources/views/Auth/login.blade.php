@@ -12,10 +12,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/login.css') }}">
 </head>
-<body class="flex items-center justify-center min-h-screen">
+<body class="flex items-center justify-center w-full min-h-screen p-12">
 
     <!-- Login Card -->
-    <div id="login-card" class="relative w-full max-w-md mx-auto bg-white rounded-2xl shadow-lg p-8 m-4">
+    <div id="login-card" class="relative w-full max-w-md mx-auto bg-white rounded-2xl shadow-lg">
         
         <!-- Header -->
         <div class="text-center mb-8">

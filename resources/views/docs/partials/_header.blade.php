@@ -1,4 +1,4 @@
-<header id="main-header" class="bg-white shadow-sm w-full border-b border-gray-200 z-20">
+<header id="main-header" class="bg-white shadow-sm w-full border-b border-gray-200 z-20 max-w-[100vw]">
     <div class="container mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex h-16 items-center header-content-wrapper">
 
@@ -79,7 +79,7 @@
 
             {{-- Bagian Tengah Header (untuk Search Button) --}}
             <div class="search-button-wrapper">
-                <button id="open-search-modal-btn-header" class="flex items-center justify-between w-full px-4 py-2 text-sm text-gray-500 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer">
+                <button id="open-search-modal-btn-header" class="flex items-center max-w-[100%] justify-between w-full px-4 py-2 text-sm text-gray-500 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer">
                     <span class="flex items-center space-x-2">
                         <i id="search-icon" class="fa fa-search text-gray-400"></i>
                         <span class="text-search">Cari menu & konten...</span>

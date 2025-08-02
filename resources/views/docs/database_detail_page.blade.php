@@ -2,16 +2,6 @@
 
 @extends('docs.index')
 
-@section('action-buttons')
-    <a href="{{ route('docs.use_case_detail', [
-        'category' => $currentCategory,
-        'page' => Str::slug($selectedNavItem->menu_nama),
-        'useCaseSlug' => Str::slug($parentUseCase->nama_proses)
-    ]) }}" class="btn btn-secondary ml-auto">
-        <i class="fas fa-arrow-left mr-2"></i> Kembali ke Detail Aksi
-    </a>
-@endsection
-
 @section('content')
     <div class="prose max-w-none">
         <h2 class="text-2xl font-bold mb-4">Detail Data Database</h2>
@@ -88,7 +78,7 @@
 
                         <div id="image-fields">
                             <div class="image-group mb-2">
-                                <input type="file" name="images[]" class="form-control image-input mb-1">
+                                <input type="file" name="images[]" multiple class="form-control image-input mb-1">
                                 <img src="#" class="preview-image mb-2 hidden max-h-40" >
                                 <button type="button" class="remove-button bg-red-500 text-white px-2 py-1 rounded-lg" style="margin-bottom: 18px">Hapus</button>
                             </div>

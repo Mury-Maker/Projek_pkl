@@ -9,6 +9,7 @@ use App\Http\Controllers\NavmenuController;
 use App\Http\Controllers\UAT_Image;
 use App\Http\Controllers\Databases_Images;
 use App\Http\Controllers\UseCaseController;
+use App\Http\Controllers\SQLImportController;
 use App\Models\UAT_IMAGES;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
@@ -28,13 +29,21 @@ Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->midd
 
 // Grup rute yang memerlukan autentikasi
 Route::middleware('auth')->group(function () {
-    // Rute Dokumentasi Utama (akan mengarahkan ke daftar use case atau halaman folder)
+    // Rute Dokumentasi Utama (akan mengarahkan ke daftar use case atau halaman folder, bisa juga ke halaman daftar tabel)
     Route::get('/docs', [DocumentationController::class, 'index'])->name('docs.index');
     Route::get('/docs/{category}/{page?}', [DocumentationController::class, 'show'])->name('docs'); // Ini sekarang untuk daftar UseCase (indeks tindakan)
 
     // Rute Detail Use Case (menampilkan satu tindakan secara rinci)
     Route::get('/docs/{category}/{page}/{useCaseSlug}', [DocumentationController::class, 'show'])
          ->name('docs.use_case_detail');
+
+    // Form Import File Sql
+    Route::post('/sql-upload', [SQLImportController::class, 'upload'])->name('sql.upload');
+    Route::post('/sql-parse/{navmenuId}', [SQLImportController::class, 'parse'])->name('sql.parse');
+    Route::delete('/sql/delete/{navmenuId}', [SQLImportController::class, 'destroy'])->name('sql.delete');
+    Route::post('/sql/upload-parse', [SQLImportController::class, 'uploadAndParse'])->name('sql.upload.parse');
+
+
 
     // 👇 Rute Baru untuk Detail Halaman UAT Data 👇
     Route::get('/docs/{category}/{page}/{useCaseSlug}/uat/{uatId}', [DocumentationController::class, 'showUatDetailPage'])

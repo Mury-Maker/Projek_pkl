@@ -16,6 +16,7 @@ use App\Models\UatData;
 use App\Models\DatabaseData;
 use App\Models\DATABASE_IMAGES;
 use App\Models\UAT_IMAGES;
+use App\Models\DocSqlFile;
 
 
 
@@ -82,10 +83,13 @@ class DocumentationController extends Controller
         $allMenus = NavMenu::where('category', $category)->orderBy('menu_order')->get();
         $navigation = NavMenu::buildTree($allMenus);
 
+
         // Temukan NavMenu yang sedang aktif berdasarkan $page slug
         $selectedNavItem = $allMenus->first(function ($menu) use ($page) {
             return Str::slug($menu->menu_nama) === $page;
         });
+        
+
 
         // 👇 PERBAIKAN DI SINI: Jika selectedNavItem tidak ditemukan, redirect ke category default atau fallback
         if (!$selectedNavItem) {
@@ -108,6 +112,8 @@ class DocumentationController extends Controller
 
 
         $menuId = $selectedNavItem->menu_id;
+        $sqlFile = DocSqlFile::where('navmenu_id', $menuId)->first();
+
         $viewData = [
             'title'             => ucfirst(Str::headline($selectedNavItem->menu_nama)) . ' - Dokumentasi ' . Str::headline($category),
             'navigation'        => $navigation,
@@ -118,10 +124,19 @@ class DocumentationController extends Controller
             'allParentMenus'    => NavMenu::where('category', $category)->orderBy('menu_nama')->get(['menu_id', 'menu_nama']),
             'categories'        => $categories,
             'activeContentType' => request()->query('content_type', 'UAT'),
+            'sqlFile'           => $sqlFile
         ];
 
         // SKENARIO 1: Menampilkan Daftar Use Case untuk suatu NavMenu (index tindakan)
         if ($selectedNavItem->menu_status == 1 && is_null($useCaseSlug)) {
+            $slugMenu = Str::slug($selectedNavItem->menu_nama);
+
+            // Jika menu bernama 'daftar tabel' → tampilkan view khusus
+            if ($slugMenu === 'daftar-tabel') {
+                return view('docs.table_index', $viewData); // View Daftar Tabel
+            }
+
+            // Jika menu bernama 'dashboard' atau menu biasa → tampilkan use case
             $useCases = UseCase::where('menu_id', $selectedNavItem->menu_id)->orderBy('id', 'desc')->get();
             $viewData['useCases'] = $useCases;
             return view('docs.use_case_index', $viewData);

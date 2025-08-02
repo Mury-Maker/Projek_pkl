@@ -36,28 +36,11 @@
             @include('docs.partials._header')
 
             {{-- Main Content Area --}}
-            <main class="flex-1 overflow-y-auto p-8 lg:p-12 relative" style="background-color: white">
+            <main class="flex-1 overflow-y-auto p-8 lg:p-12 relative max-w-[100vw]" style="background-color: white">
                 <nav class="flex items-center text-sm text-gray-600 mb-6" aria-label="Breadcrumb">
                     <ol class="inline-flex items-center space-x-1 md:space-x-2 rtl:space-x-reverse">
                 
                         {{-- Home --}}
-                        <li class="inline-flex items-center">
-                            @if (empty($selectedNavItem) && empty($parentUseCase))
-                                <span class="inline-flex items-center text-gray-800 font-semibold" aria-current="page">
-                                    <svg class="w-4 h-4 mr-1.5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                                        <path d="M10 2L2 10h3v6h10v-6h3L10 2z" />
-                                    </svg>
-                                    Home
-                                </span>
-                            @else
-                                <a href="{{ route('docs', ['category' => $currentCategory]) }}" class="inline-flex items-center text-gray-500 hover:text-blue-600 transition">
-                                    <svg class="w-4 h-4 mr-1.5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                                        <path d="M10 2L2 10h3v6h10v-6h3L10 2z" />
-                                    </svg>
-                                    Home
-                                </a>
-                            @endif
-                        </li>
                 
                         {{-- Parent Menu (e.g., "Menu Utama") --}}
                         @if ($selectedNavItem && $selectedNavItem->parent)
@@ -176,7 +159,7 @@
                 </nav>                         
                 <div class="judul-halaman">
                     {{-- BERIKAN ID PADA H1 INI --}}
-                    <h1 id="main-content-title"> {!! ucfirst(Str::headline($currentPage)) !!}</h1>
+                    <h1 id="main-content-title"> {!! ucfirst(Str::headline($currentPage .' '. ucfirst($currentCategory)))  !!}</h1>
                     {{-- Tombol aksi spesifik akan ditambahkan di yield content --}}
                     @yield('action-buttons')
                 </div>
