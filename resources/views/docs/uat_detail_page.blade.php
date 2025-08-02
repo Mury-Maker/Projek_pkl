@@ -2,16 +2,6 @@
 
 @extends('docs.index')
 
-@section('action-buttons')
-    {{-- Tombol untuk kembali ke halaman use case utama --}}
-    <a href="{{ route('docs.use_case_detail', [
-        'category' => $currentCategory,
-        'page' => Str::slug($selectedNavItem->menu_nama),
-        'useCaseSlug' => Str::slug($parentUseCase->nama_proses)
-    ]) }}" class="btn btn-secondary ml-auto">
-        <i class="fas fa-arrow-left mr-2"></i> Kembali ke Detail Aksi
-    </a>
-@endsection
 
 @section('content')
     <div class="prose max-w-none">

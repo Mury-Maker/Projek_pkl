@@ -21,14 +21,25 @@ class UseCaseSeeder extends Seeder
         // === Kategori Utama: ePesantren ===
         // Buat menu "Beranda ePesantren"
         $homeMenuEpesantren = NavMenu::firstOrCreate(
-            ['menu_nama' => 'Beranda ePesantren', 'category' => 'epesantren', 'menu_child' => 0],
+            ['menu_nama' => 'Dashboard', 'category' => 'epesantren', 'menu_child' => 0],
             [
                 'menu_link' => 'epesantren/beranda-epesantren',
                 'menu_icon' => 'fa-solid fa-home',
                 'menu_order' => 0,
-                'menu_status' => 1, // Ini akan punya daftar UseCase
+                'menu_status' => 1,
             ]
         );
+
+        $daftarTabelEpesantren = NavMenu::create([
+            'menu_nama' => 'Daftar Tabel',
+            'category' => 'epesantren',
+            'menu_child' => 0,
+            'menu_link' => 'epesantren/tabels-epesantren',
+            'menu_icon' => 'fa-solid fa-table',
+            'menu_order' => 1,
+            'menu_status' => 1,
+
+        ]);
 
         // Buat UseCase "Informasi Umum" untuk "Beranda ePesantren"
         $infoUmumEpesantren = UseCase::firstOrCreate(

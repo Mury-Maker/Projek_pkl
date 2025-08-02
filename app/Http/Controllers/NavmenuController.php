@@ -281,9 +281,10 @@ class NavmenuController extends Controller
 
         $newlyCreatedMenu = null; // Inisialisasi variabel
 
+
         DB::transaction(function () use ($newCategorySlug, $displayCategoryName, &$newlyCreatedMenu) {
             $menu = NavMenu::create([
-                'menu_nama' => 'Dashboard ' . $displayCategoryName,
+                'menu_nama' => 'Dashboard',
                 'menu_link' => $newCategorySlug . '/beranda-' . Str::slug($displayCategoryName),
                 'menu_icon' => 'fa-solid fa-home',
                 'menu_child' => 0,
@@ -292,7 +293,17 @@ class NavmenuController extends Controller
                 'category' => $newCategorySlug,
             ]);
 
-            $newlyCreatedMenu = $menu; // Simpan menu yang baru dibuat
+            $tabels = NavMenu::create([
+                'menu_nama' => 'Daftar Tabel',
+                'menu_link' => $newCategorySlug . '/tabels-' . Str::slug($displayCategoryName),
+                'menu_icon' => 'fa-solid fa-table',
+                'menu_child' => 0,
+                'menu_order' => 1,
+                'menu_status' => 1,
+                'category' => $newCategorySlug,
+            ]);
+
+            $newlyCreatedMenu = [$menu, $tabels]; // Simpan menu yang baru dibuat
 
             // Buat UseCase default "Pengantar" untuk halaman beranda kategori baru
             UseCase::create([
@@ -314,9 +325,10 @@ class NavmenuController extends Controller
             'success' => 'Kategori berhasil ditambahkan!',
             'redirect_url' => route('docs', [
                 'category' => $newCategorySlug,
-                'page' => Str::slug($newlyCreatedMenu->menu_nama) // Menggunakan slug dari nama menu yang baru dibuat
+                'page' => Str::slug($newlyCreatedMenu[0]->menu_nama) // Dashboard
             ])
         ]);
+
     }
 
     /**

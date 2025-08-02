@@ -17,7 +17,7 @@ class EpesantrenNavmenuSeeder extends Seeder
 
         $epesantrenMenuData = [
             ['menu_id' => 1, 'menu_nama' => 'Dashboard', 'menu_link' => 'manage', 'menu_icon' => 'fa fa-th', 'menu_child' => 0, 'menu_order' => 1, 'menu_status' => 0],
-            ['menu_id' => 2, 'menu_nama' => 'Kesantrian', 'menu_link' => '#', 'menu_icon' => 'fa fa-users text-stock', 'menu_child' => 0, 'menu_order' => 2, 'menu_status' => 0],
+            ['menu_id' => 2, 'menu_nama' => 'Daftar Tabel', 'menu_link' => '#', 'menu_icon' => 'fa fa-users text-stock', 'menu_child' => 0, 'menu_order' => 2, 'menu_status' => 0],
             // ... (semua 223 baris data Anda yang lain ada di sini) ...
             ['menu_id' => 230, 'menu_nama' => 'Pelanggaran', 'menu_link' => 'manage/pelanggaran', 'menu_icon' => 'fa fa-circle-o', 'menu_child' => 95, 'menu_order' => 5, 'menu_status' => 0]
         ];
